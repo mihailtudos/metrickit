@@ -22,17 +22,17 @@ func (h *Handler) handleUploads(w http.ResponseWriter, r *http.Request) {
 
 	urlParts := strings.Split(r.URL.Path, "/")
 
+	// return http.StatusNotFound if metric type is not provided
+	if len(urlParts) < reqPartsLength || !isMetricTypePresent(urlParts) {
+		fmt.Println("missing metric type")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	// return http.StatusBadRequest if metric name or value submitted is not provided
 	if len(urlParts) < reqPartsLength || isMetricNameAndValueMissing(urlParts) {
 		fmt.Println("missing metric name")
 		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// return http.StatusNotFound if metric type is not provided
-	if !isMetricTypePresent(urlParts) {
-		fmt.Println("missing metric type")
-		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -66,22 +66,13 @@ func isMetricNameAndValueMissing(urlParts []string) bool {
 }
 
 func isMetricNamePresent(urlParts []string) bool {
-	if urlParts[idxMetricName] != "" {
-		return true
-	}
-	return false
+	return urlParts[idxMetricName] != ""
 }
 
 func isMetricValuePresent(urlParts []string) bool {
-	if urlParts[idxMetricVal] != "" {
-		return true
-	}
-	return false
+	return urlParts[idxMetricVal] != ""
 }
 
 func isMetricTypePresent(urlParts []string) bool {
-	if urlParts[idxMetricType] != "" {
-		return true
-	}
-	return false
+	return urlParts[idxMetricType] != ""
 }

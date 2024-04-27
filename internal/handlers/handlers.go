@@ -24,6 +24,8 @@ func (h *Handler) InitHandlers() http.Handler {
 	mux.HandleFunc("/update/counter/", h.handleUploads)
 	mux.HandleFunc("/update/gauge/", h.handleUploads)
 
-	mux.Handle("/", http.NotFoundHandler())
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	})
 	return mux
 }
