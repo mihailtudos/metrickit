@@ -110,6 +110,8 @@ func TestHandleUploads(t *testing.T) {
 			assert.Equal(t, test.want.code, res.StatusCode)
 			_, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
+			err = res.Body.Close()
+			require.NoError(t, err)
 
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
 		})
