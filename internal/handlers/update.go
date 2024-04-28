@@ -39,12 +39,12 @@ func (h *Handler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 	switch urlParts[idxMetricType] {
-	case entities.CounterMetric:
+	case entities.CounterMetricName:
 		if err := h.services.CounterService.Create(urlParts[idxMetricName], urlParts[idxMetricVal]); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-	case entities.GaugeMetric:
+	case entities.GaugeMetricName:
 		if err := h.services.GaugeService.Create(urlParts[idxMetricName], urlParts[idxMetricVal]); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
