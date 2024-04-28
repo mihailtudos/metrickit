@@ -104,6 +104,11 @@ func publishMetric(mType, ServerAddr string, metric any) error {
 		return err
 	}
 
+	defer func(res *http.Response) {
+		err := res.Body.Close()
+		fmt.Println(err)
+	}(res)
+
 	if res.StatusCode == http.StatusOK {
 		fmt.Println("published successfully: ", url)
 	}
