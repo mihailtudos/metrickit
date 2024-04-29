@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func NewGaugeService(repo repositories.GaugeRepository, logger *slog.Logger) *Ga
 func (g *GaugeMetricService) Create(key string, val string) error {
 	v, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		return err
+		return ErrInvalidValue
 	}
 
 	g.logger.Info(fmt.Sprintf("setting gauge: %s to %v", key, v))

@@ -1,17 +1,17 @@
 package handlers
 
 import (
-	"github.com/mihailtudos/metrickit/internal/services"
+	"github.com/mihailtudos/metrickit/internal/service"
 	"log/slog"
 	"net/http"
 )
 
 type Handler struct {
-	services *services.Service
+	services *service.Service
 	logger   *slog.Logger
 }
 
-func NewHandler(services *services.Service, logger *slog.Logger) *Handler {
+func NewHandler(services *service.Service, logger *slog.Logger) *Handler {
 	return &Handler{services: services, logger: logger}
 }
 

@@ -1,9 +1,12 @@
-package services
+package service
 
 import (
+	"errors"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"log/slog"
 )
+
+var ErrInvalidValue = errors.New("invalid value given")
 
 type CounterService interface {
 	Create(key string, val string) error

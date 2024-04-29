@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/mihailtudos/metrickit/internal/services"
+	"github.com/mihailtudos/metrickit/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -14,7 +14,7 @@ import (
 
 func TestHandleUploads(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	mockService := services.NewMockService()
+	mockService := service.NewMockService()
 	h := NewHandler(mockService, logger).InitHandlers()
 
 	type want struct {

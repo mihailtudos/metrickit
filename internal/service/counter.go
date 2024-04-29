@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func NewCounterService(repo repositories.CounterRepository, logger *slog.Logger)
 func (c *CounterMetricService) Create(key string, val string) error {
 	v, err := strconv.ParseInt(val, 10, 64)
 	if err != nil {
-		return err
+		return ErrInvalidValue
 	}
 
 	c.logger.Info(fmt.Sprintf("storing metric %s %v", key, v))
