@@ -73,5 +73,5 @@ func isMetricAvailable(metricType, metricName string, h *HandlerStr) (any, error
 		}
 	}
 
-	return nil, errors.New("Not found")
+	return nil, errors.New("not found")
 }

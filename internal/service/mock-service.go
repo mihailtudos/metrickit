@@ -16,7 +16,7 @@ func (m *mockCounterService) Create(key string, val string) error {
 }
 
 func (m *mockCounterService) Get(key string) (entities.Counter, bool) {
-	return m.Get(key)
+	return entities.Counter(2), true
 }
 
 func (m *mockCounterService) GetAll() map[string]entities.Counter {
@@ -34,7 +34,7 @@ func (m *mockGaugeService) Create(key string, val string) error {
 }
 
 func (m *mockGaugeService) Get(key string) (entities.Gauge, bool) {
-	return m.Get(key)
+	return entities.Gauge(2.2), true
 }
 
 func (m *mockGaugeService) GetAll() map[string]entities.Gauge {
