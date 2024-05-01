@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"strconv"
 )
 
@@ -14,6 +15,14 @@ func (m *mockCounterService) Create(key string, val string) error {
 	return nil
 }
 
+func (m *mockCounterService) Get(key string) (entities.Counter, bool) {
+	return m.Get(key)
+}
+
+func (m *mockCounterService) GetAll() map[string]entities.Counter {
+	return make(map[string]entities.Counter)
+}
+
 type mockGaugeService struct{}
 
 func (m *mockGaugeService) Create(key string, val string) error {
@@ -24,9 +33,17 @@ func (m *mockGaugeService) Create(key string, val string) error {
 	return nil
 }
 
+func (m *mockGaugeService) Get(key string) (entities.Gauge, bool) {
+	return m.Get(key)
+}
+
+func (m *mockGaugeService) GetAll() map[string]entities.Gauge {
+	return make(map[string]entities.Gauge)
+}
+
 func NewMockService() *Service {
 	return &Service{
-		GaugeService:   &mockCounterService{},
+		GaugeService:   &mockGaugeService{},
 		CounterService: &mockCounterService{},
 	}
 }

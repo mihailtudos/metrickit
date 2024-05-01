@@ -7,10 +7,14 @@ import (
 
 type GaugeRepository interface {
 	Create(key string, gauge entities.Gauge) error
+	Get(key string) (entities.Gauge, bool)
+	GetAll() map[string]entities.Gauge
 }
 
 type CounterRepository interface {
 	Create(key string, counter entities.Counter) error
+	Get(key string) (entities.Counter, bool)
+	GetAll() map[string]entities.Counter
 }
 
 type Repository struct {

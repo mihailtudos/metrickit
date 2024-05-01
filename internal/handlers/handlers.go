@@ -1,31 +1,33 @@
 package handlers
 
 import (
+	"github.com/go-chi/chi/v5"
 	"github.com/mihailtudos/metrickit/internal/service"
 	"log/slog"
 	"net/http"
 )
 
-type Handler struct {
+type HandlerStr struct {
 	services *service.Service
 	logger   *slog.Logger
 }
 
-func NewHandler(services *service.Service, logger *slog.Logger) *Handler {
-	return &Handler{services: services, logger: logger}
+func NewHandler(services *service.Service, logger *slog.Logger) *HandlerStr {
+	return &HandlerStr{services: services, logger: logger}
 }
 
-func (h *Handler) InitHandlers() http.Handler {
-	mux := http.NewServeMux()
+func (h *HandlerStr) InitHandlers() http.Handler {
+	mux := chi.NewMux()
+
+	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
+	// Content-Type: text/plain
+	mux.Get("/value/{metricType}/{metricName}", h.getMetricValue)
+	mux.Get("/", h.showMetrics)
 
 	// handlers to handle metrics following the format:
-	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_NAME>
+	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VALUE>
 	// Content-Type: text/plain
-	mux.HandleFunc("/update/counter/", h.handleUploads)
-	mux.HandleFunc("/update/gauge/", h.handleUploads)
+	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-	})
 	return mux
 }

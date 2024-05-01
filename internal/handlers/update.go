@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"net/http"
-	"strings"
 )
 
 const (
@@ -14,38 +14,35 @@ const (
 	idxMetricVal   = 4
 )
 
-func (h *Handler) handleUploads(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	urlParts := strings.Split(r.URL.Path, "/")
+func (h *HandlerStr) handleUploads(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
 
 	// return http.StatusNotFound if metric type is not provided
-	if len(urlParts) < reqPartsLength || !isMetricTypePresent(urlParts) {
+	if metricType != entities.GaugeMetricName && metricType != entities.CounterMetricName {
 		fmt.Println("missing metric type")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	// return http.StatusBadRequest if metric name or value submitted is not provided
-	if len(urlParts) < reqPartsLength || isMetricNameAndValueMissing(urlParts) {
-		fmt.Println("missing metric name")
+	if isMetricNameAndValueMissing(metricName, metricValue) {
+		fmt.Println("missing metric name or value")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	switch urlParts[idxMetricType] {
+	switch metricType {
 	case entities.CounterMetricName:
-		if err := h.services.CounterService.Create(urlParts[idxMetricName], urlParts[idxMetricVal]); err != nil {
+		if err := h.services.CounterService.Create(metricName, metricValue); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	case entities.GaugeMetricName:
-		if err := h.services.GaugeService.Create(urlParts[idxMetricName], urlParts[idxMetricVal]); err != nil {
+		if err := h.services.GaugeService.Create(metricName, metricValue); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -57,22 +54,6 @@ func (h *Handler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func isMetricNameAndValueMissing(urlParts []string) bool {
-	if isMetricNamePresent(urlParts) && isMetricValuePresent(urlParts) {
-		return false
-	}
-
-	return true
-}
-
-func isMetricNamePresent(urlParts []string) bool {
-	return urlParts[idxMetricName] != ""
-}
-
-func isMetricValuePresent(urlParts []string) bool {
-	return urlParts[idxMetricVal] != ""
-}
-
-func isMetricTypePresent(urlParts []string) bool {
-	return urlParts[idxMetricType] != ""
+func isMetricNameAndValueMissing(metricName, metricValue string) bool {
+	return metricName == "" || metricValue == ""
 }

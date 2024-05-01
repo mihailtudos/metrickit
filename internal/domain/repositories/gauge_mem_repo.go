@@ -18,3 +18,20 @@ func (gmr *GaugeMemRepository) Create(key string, gauge entities.Gauge) error {
 
 	return nil
 }
+
+func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, bool) {
+	if gmr.store == nil || gmr.store.Gauge == nil {
+		return entities.Gauge(0), false
+	}
+
+	v, ok := gmr.store.Gauge[key]
+	return v, ok
+}
+
+func (gmr *GaugeMemRepository) GetAll() map[string]entities.Gauge {
+	if gmr.store == nil || gmr.store.Gauge == nil {
+		return make(map[string]entities.Gauge)
+	}
+
+	return gmr.store.Gauge
+}

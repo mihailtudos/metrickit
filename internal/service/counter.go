@@ -26,3 +26,11 @@ func (c *CounterMetricService) Create(key string, val string) error {
 	c.logger.Info(fmt.Sprintf("storing metric %s %v", key, v))
 	return c.cRepo.Create(key, entities.Counter(v))
 }
+
+func (c *CounterMetricService) Get(key string) (entities.Counter, bool) {
+	return c.cRepo.Get(key)
+}
+
+func (c *CounterMetricService) GetAll() map[string]entities.Counter {
+	return c.cRepo.GetAll()
+}

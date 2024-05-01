@@ -41,17 +41,17 @@ func TestHandleUploads(t *testing.T) {
 			url:    "/update/",
 			method: http.MethodPost,
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "",
+				code:        http.StatusNotFound,
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
-			name:   "missing metric type from the url",
-			url:    "/update/counter",
+			name:   "passing invalid metric type",
+			url:    "/update/invalid-metric",
 			method: http.MethodPost,
 			want: want{
-				code:        http.StatusMovedPermanently,
-				contentType: "",
+				code:        http.StatusNotFound,
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -60,7 +60,7 @@ func TestHandleUploads(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				code:        http.StatusNotFound,
-				contentType: "",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -68,8 +68,8 @@ func TestHandleUploads(t *testing.T) {
 			url:    "/update/counter/someMetric/",
 			method: http.MethodPost,
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "",
+				code:        http.StatusNotFound,
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{

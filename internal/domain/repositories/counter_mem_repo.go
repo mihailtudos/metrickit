@@ -23,3 +23,19 @@ func (cmr *CounterMemRepository) Create(key string, counter entities.Counter) er
 
 	return nil
 }
+
+func (cmr *CounterMemRepository) Get(key string) (entities.Counter, bool) {
+	if cmr.store == nil || cmr.store.Counter == nil {
+		return entities.Counter(0), false
+	}
+	val, ok := cmr.store.Counter[key]
+	return val, ok
+}
+
+func (cmr *CounterMemRepository) GetAll() map[string]entities.Counter {
+	if cmr.store == nil || cmr.store.Counter == nil {
+		return make(map[string]entities.Counter)
+	}
+
+	return cmr.store.Counter
+}
