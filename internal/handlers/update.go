@@ -21,8 +21,8 @@ func (h *HandlerStr) handleUploads(w http.ResponseWriter, r *http.Request) {
 
 	// return http.StatusNotFound if metric type is not provided
 	if metricType != entities.GaugeMetricName && metricType != entities.CounterMetricName {
-		fmt.Println("missing metric type")
-		w.WriteHeader(http.StatusNotFound)
+		fmt.Println("invalid metric type")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

@@ -47,11 +47,11 @@ func TestHandleUploads(t *testing.T) {
 		},
 		{
 			name:   "passing invalid metric type",
-			url:    "/update/invalid-metric",
+			url:    "/update/unknown/testCounter/100",
 			method: http.MethodPost,
 			want: want{
-				code:        http.StatusNotFound,
-				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusBadRequest,
+				contentType: "",
 			},
 		},
 		{
