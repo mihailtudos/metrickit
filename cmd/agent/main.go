@@ -11,11 +11,13 @@ import (
 )
 
 func main() {
+	parseFlags()
 	agentCfg := config.NewAgentCfg(
-		time.Second*2,
-		time.Second*10,
-		"http://localhost:8080",
+		poolIntervalInSeconds.GetDuration(),
+		reportIntervalInSeconds.GetDuration(),
+		serverAddr.String(),
 	)
+
 	metrics := &entities.MetricsCollection{}
 
 	go collectMetrics(agentCfg.PollInterval, metrics)
@@ -94,9 +96,9 @@ func publishMetric(mType, ServerAddr string, metric any) error {
 
 	switch v := metric.(type) {
 	case entities.CounterMetric:
-		url = fmt.Sprintf("%s/update/%s/%s/%v", ServerAddr, entities.CounterMetricName, v.Name, v.Value)
+		url = fmt.Sprintf("http://%s/update/%s/%s/%v", ServerAddr, entities.CounterMetricName, v.Name, v.Value)
 	case entities.GaugeMetric:
-		url = fmt.Sprintf("%s/update/%s/%s/%v", ServerAddr, entities.GaugeMetricName, v.Name, v.Value)
+		url = fmt.Sprintf("http://%s/update/%s/%s/%v", ServerAddr, entities.GaugeMetricName, v.Name, v.Value)
 	}
 
 	res, err := http.Post(url, "text/plain", nil)

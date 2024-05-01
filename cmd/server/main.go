@@ -11,10 +11,9 @@ import (
 	"net/http"
 )
 
-const port = "8080"
-
 func main() {
-	appConfig := config.NewAppConfig(port)
+	parseFlags()
+	appConfig := config.NewAppConfig(addr.String())
 	run(appConfig)
 }
 
@@ -25,5 +24,5 @@ func run(cfg config.AppConfig) {
 	h := handlers.NewHandler(service.NewService(repos, cfg.Log), cfg.Log)
 
 	fmt.Printf("running server 🔥 on port: %s\n", cfg.Address)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", cfg.Address), h.InitHandlers()))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s", cfg.Address), h.InitHandlers()))
 }
