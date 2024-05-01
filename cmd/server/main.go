@@ -24,5 +24,5 @@ func run(cfg config.AppConfig) {
 	h := handlers.NewHandler(service.NewService(repos, cfg.Log), cfg.Log)
 
 	fmt.Printf("running server 🔥 on port: %s\n", cfg.Address)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s", cfg.Address), h.InitHandlers()))
+	log.Fatal(http.ListenAndServe(cfg.Address, h.InitHandlers()))
 }

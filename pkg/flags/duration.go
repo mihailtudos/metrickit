@@ -18,20 +18,20 @@ func NewDurationFlag(durationType time.Duration, length int) *DurationFlag {
 	}
 }
 
-func (sa *DurationFlag) String() string {
-	return fmt.Sprintf("%v", sa.GetDuration())
+func (df *DurationFlag) String() string {
+	return fmt.Sprintf("%v", df.GetDuration())
 }
 
-func (a *DurationFlag) Set(flagsValue string) error {
+func (df *DurationFlag) Set(flagsValue string) error {
 	interval, err := strconv.Atoi(flagsValue)
 	if err != nil {
 		return fmt.Errorf("invalid interval specified")
 	}
 
-	a.Length = interval
+	df.Length = interval
 	return nil
 }
 
-func (a *DurationFlag) GetDuration() time.Duration {
-	return a.DurationType * time.Duration(a.Length)
+func (df *DurationFlag) GetDuration() time.Duration {
+	return df.DurationType * time.Duration(df.Length)
 }

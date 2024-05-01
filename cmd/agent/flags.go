@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-const DEFAULT_PORT = 8080
-const DEFAULT_ADDRESS = "localhost"
-const DEFAULT_REPORT_INTERVAL = 10
-const DEFAULT_POLL_INTERVAL = 2
+const DefaultPort = 8080
+const DefaultAddress = "localhost"
+const DefaultReportInterval = 10
+const DefaultPoolInterval = 2
 
 var serverAddr *flags.ServerAddr
 var poolIntervalInSeconds *flags.DurationFlag
 var reportIntervalInSeconds *flags.DurationFlag
 
 func parseFlags() {
-	serverAddr = flags.NewServerAddressFlag(DEFAULT_ADDRESS, DEFAULT_PORT)
-	poolIntervalInSeconds = flags.NewDurationFlag(time.Second, DEFAULT_POLL_INTERVAL)
-	reportIntervalInSeconds = flags.NewDurationFlag(time.Second, DEFAULT_REPORT_INTERVAL)
+	serverAddr = flags.NewServerAddressFlag(DefaultAddress, DefaultPort)
+	poolIntervalInSeconds = flags.NewDurationFlag(time.Second, DefaultPoolInterval)
+	reportIntervalInSeconds = flags.NewDurationFlag(time.Second, DefaultReportInterval)
 
 	_ = flag.Value(serverAddr)
 

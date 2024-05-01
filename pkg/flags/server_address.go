@@ -22,7 +22,7 @@ func (sa *ServerAddr) String() string {
 	return fmt.Sprintf("%s:%d", sa.Host, sa.Port)
 }
 
-func (a *ServerAddr) Set(flagsValue string) error {
+func (sa *ServerAddr) Set(flagsValue string) error {
 	parts := strings.Split(flagsValue, ":")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid server addres format usage: ADDRESS:PORT (e.g: localhost:8080)")
@@ -33,7 +33,7 @@ func (a *ServerAddr) Set(flagsValue string) error {
 		return err
 	}
 
-	a.Port = port
-	a.Host = parts[0]
+	sa.Port = port
+	sa.Host = parts[0]
 	return nil
 }
