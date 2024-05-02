@@ -12,12 +12,11 @@ import (
 )
 
 func main() {
-	parseFlags()
-	appConfig := config.NewAppConfig(addr.String())
+	appConfig := config.NewServerConfig()
 	run(appConfig)
 }
 
-func run(cfg config.AppConfig) {
+func run(cfg *config.ServerConfig) {
 	store := storage.NewMemStorage()
 
 	repos := repositories.NewRepository(store)

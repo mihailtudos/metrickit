@@ -3,6 +3,7 @@ package flags
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -23,15 +24,21 @@ func (df *DurationFlag) String() string {
 }
 
 func (df *DurationFlag) Set(flagsValue string) error {
-	interval, err := strconv.Atoi(flagsValue)
-	if err != nil {
-		return fmt.Errorf("invalid interval specified")
+	amountOfSeconds, ok := strings.CutSuffix(flagsValue, "s")
+	if df.DurationType == time.Second && !ok {
+		return fmt.Errorf("invalid interval format")
+	}
+
+	interval, err := strconv.Atoi(amountOfSeconds)
+	if err != nil || interval < 0 {
+		return fmt.Errorf("invalid interval value")
 	}
 
 	df.Length = interval
 	return nil
 }
 
-func (df *DurationFlag) GetDuration() time.Duration {
-	return df.DurationType * time.Duration(df.Length)
+func (df *DurationFlag) GetDuration() *time.Duration {
+	val := df.DurationType * time.Duration(df.Length)
+	return &val
 }
