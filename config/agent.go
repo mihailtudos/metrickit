@@ -16,8 +16,8 @@ var poolIntervalInSeconds *flags.DurationFlag
 var reportIntervalInSeconds *flags.DurationFlag
 
 type AgentConfig struct {
-	PollInterval   *time.Duration
-	ReportInterval *time.Duration
+	PollInterval   time.Duration
+	ReportInterval time.Duration
 	ServerAddr     string
 }
 
@@ -55,7 +55,7 @@ func parseFlags() {
 
 	flag.Parse()
 
-	host, port, err := splitAddressParts(*cfg.ServerAddr)
+	host, port, err := splitAddressParts(cfg.ServerAddr)
 	if err == nil {
 		serverAddr = flags.NewServerAddressFlag(host, port)
 	}

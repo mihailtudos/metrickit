@@ -32,7 +32,6 @@ func (df *DurationFlag) Set(flagsValue string) error {
 	return nil
 }
 
-func (df *DurationFlag) GetDuration() *time.Duration {
-	val := df.DurationType * time.Duration(df.Length)
-	return &val
+func (df *DurationFlag) GetDuration() time.Duration {
+	return df.DurationType * time.Duration(df.Length)
 }

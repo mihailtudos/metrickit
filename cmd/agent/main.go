@@ -15,11 +15,11 @@ func main() {
 
 	metrics := &entities.MetricsCollection{}
 
-	go collectMetrics(*agentCfg.PollInterval, metrics)
+	go collectMetrics(agentCfg.PollInterval, metrics)
 
 	// http://<SERVER_ADDR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VAL>
 	for {
-		time.Sleep(*agentCfg.ReportInterval)
+		time.Sleep(agentCfg.ReportInterval)
 		// publish counter type metrics
 		for _, v := range metrics.CounterMetrics {
 			err := publishMetric(entities.CounterMetricName, agentCfg.ServerAddr, v)

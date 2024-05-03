@@ -18,7 +18,7 @@ const DefaultAddress = "localhost"
 var addr *flags.ServerAddr
 
 type EnvServerAddress struct {
-	Address string `env:"ADDRESS"`
+	Address *string `env:"ADDRESS"`
 }
 
 func parseServerEnvs() {
@@ -50,8 +50,11 @@ func NewServerConfig() *ServerConfig {
 	return &ServerConfig{Address: addr.String(), Log: logger}
 }
 
-func splitAddressParts(address string) (string, int, error) {
-	parts := strings.Split(address, ":")
+func splitAddressParts(address *string) (string, int, error) {
+	if address == nil {
+		return "", 0, fmt.Errorf("invalid address: missing parts")
+	}
+	parts := strings.Split(*address, ":")
 	if len(parts) != 2 {
 		return "", 0, fmt.Errorf("invalid address: missing parts")
 	}
