@@ -24,7 +24,7 @@ func (df *DurationFlag) String() string {
 
 func (df *DurationFlag) Set(flagsValue string) error {
 	interval, err := strconv.Atoi(flagsValue)
-	if err != nil {
+	if err != nil || interval < 0 {
 		return fmt.Errorf("invalid interval specified")
 	}
 

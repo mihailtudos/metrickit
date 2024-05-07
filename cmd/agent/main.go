@@ -7,25 +7,27 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 )
 
 func main() {
 	agentCfg := config.NewAgentConfig()
 
-	metrics := &entities.MetricsCollection{}
+	metrics := entities.NewMetricsCollection()
+	var mu sync.Mutex
 
-	go collectMetrics(agentCfg.PollInterval, metrics)
+	go collectMetrics(agentCfg.PollInterval, &mu, metrics)
 
 	// http://<SERVER_ADDR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VAL>
 	for {
 		time.Sleep(agentCfg.ReportInterval)
+		mu.Lock()
 		// publish counter type metrics
 		for _, v := range metrics.CounterMetrics {
 			err := publishMetric(entities.CounterMetricName, agentCfg.ServerAddr, v)
 			if err != nil {
-				fmt.Println(err)
-				return
+				agentCfg.Log.Error(fmt.Sprintf("something went wrong when publishing the counter metrics %s", err.Error()))
 			}
 		}
 
@@ -33,20 +35,21 @@ func main() {
 		for _, v := range metrics.GaugeMetrics {
 			err := publishMetric(entities.GaugeMetricName, agentCfg.ServerAddr, v)
 			if err != nil {
-				fmt.Println(err)
-				return
+				agentCfg.Log.Error(fmt.Sprintf("something went wrong when publishing the gauge metrics %s", err.Error()))
 			}
 		}
+		mu.Unlock()
 	}
 }
 
-func collectMetrics(poolItl time.Duration, metrics *entities.MetricsCollection) {
+func collectMetrics(poolItl time.Duration, mu *sync.Mutex, metrics *entities.MetricsCollection) {
 	poolTicker := time.NewTicker(poolItl)
 
 	currMetric := runtime.MemStats{}
 	var counter entities.Counter
 
 	for range poolTicker.C {
+		mu.Lock()
 		*metrics = entities.MetricsCollection{}
 
 		counter++
@@ -83,6 +86,7 @@ func collectMetrics(poolItl time.Duration, metrics *entities.MetricsCollection) 
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.StackSys, Value: entities.Gauge(currMetric.StackSys)})
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.Sys, Value: entities.Gauge(currMetric.Sys)})
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.TotalAlloc, Value: entities.Gauge(currMetric.TotalAlloc)})
+		mu.Unlock()
 	}
 }
 

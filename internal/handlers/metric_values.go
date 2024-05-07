@@ -20,6 +20,7 @@ func (h *HandlerStr) showMetrics(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
+	h.logger.Info("hit showMetrics handler")
 
 	gauges := h.services.GaugeService.GetAll()
 	counters := h.services.CounterService.GetAll()

@@ -14,12 +14,17 @@ func NewGaugeMemRepository(memStorage *storage.MemStorage) *GaugeMemRepository {
 }
 
 func (gmr *GaugeMemRepository) Create(key string, gauge entities.Gauge) error {
+	gmr.store.Mu.Lock()
+	defer gmr.store.Mu.Unlock()
 	gmr.store.Gauge[key] = gauge
 
 	return nil
 }
 
 func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, bool) {
+	gmr.store.Mu.Lock()
+	defer gmr.store.Mu.Unlock()
+
 	if gmr.store == nil || gmr.store.Gauge == nil {
 		return entities.Gauge(0), false
 	}
@@ -29,6 +34,9 @@ func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, bool) {
 }
 
 func (gmr *GaugeMemRepository) GetAll() map[string]entities.Gauge {
+	gmr.store.Mu.Lock()
+	defer gmr.store.Mu.Unlock()
+
 	if gmr.store == nil || gmr.store.Gauge == nil {
 		return make(map[string]entities.Gauge)
 	}

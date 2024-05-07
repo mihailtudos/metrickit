@@ -5,6 +5,8 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/mihailtudos/metrickit/pkg/flags"
 	"log"
+	"log/slog"
+	"os"
 	"time"
 )
 
@@ -19,6 +21,7 @@ type AgentConfig struct {
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	ServerAddr     string
+	Log            *slog.Logger
 }
 
 type EnvAgentConfig struct {
@@ -34,6 +37,7 @@ func NewAgentConfig() *AgentConfig {
 		PollInterval:   poolIntervalInSeconds.GetDuration(),
 		ReportInterval: reportIntervalInSeconds.GetDuration(),
 		ServerAddr:     serverAddr.String(),
+		Log:            slog.New(slog.NewJSONHandler(os.Stdout, nil)),
 	}
 }
 

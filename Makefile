@@ -6,4 +6,7 @@ run/server:
 run/agent:
 	go run ./cmd/agent/. $(ARGS)
 
-.PHONY: run/server, run/agent
+run/tests:
+	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+
+.PHONY: run/server, run/agent, run/tests
