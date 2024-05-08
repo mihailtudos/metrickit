@@ -7,27 +7,28 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
-	"sync"
 	"time"
 )
 
 func main() {
 	agentCfg := config.NewAgentConfig()
-
+	counter := new(entities.Counter)
+	*counter = 0
 	metrics := entities.NewMetricsCollection()
-	var mu sync.Mutex
 
-	go collectMetrics(agentCfg.PollInterval, &mu, metrics)
+	go collectMetrics(agentCfg.PollInterval, metrics, counter)
 
 	// http://<SERVER_ADDR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VAL>
 	for {
 		time.Sleep(agentCfg.ReportInterval)
-		mu.Lock()
+		metrics.Mu.Lock()
 		// publish counter type metrics
 		for _, v := range metrics.CounterMetrics {
 			err := publishMetric(entities.CounterMetricName, agentCfg.ServerAddr, v)
 			if err != nil {
 				agentCfg.Log.Error(fmt.Sprintf("something went wrong when publishing the counter metrics %s", err.Error()))
+			} else {
+				*counter = 0
 			}
 		}
 
@@ -38,24 +39,21 @@ func main() {
 				agentCfg.Log.Error(fmt.Sprintf("something went wrong when publishing the gauge metrics %s", err.Error()))
 			}
 		}
-		mu.Unlock()
+		metrics.Mu.Unlock()
 	}
 }
 
-func collectMetrics(poolItl time.Duration, mu *sync.Mutex, metrics *entities.MetricsCollection) {
+func collectMetrics(poolItl time.Duration, metrics *entities.MetricsCollection, counter *entities.Counter) {
 	poolTicker := time.NewTicker(poolItl)
-
 	currMetric := runtime.MemStats{}
-	var counter entities.Counter
 
 	for range poolTicker.C {
-		mu.Lock()
 		*metrics = entities.MetricsCollection{}
-
-		counter++
+		metrics.Mu.Lock()
+		*counter++
 		runtime.ReadMemStats(&currMetric)
 		// Counter Metrics
-		metrics.CounterMetrics = append(metrics.CounterMetrics, entities.CounterMetric{Name: entities.PollCount, Value: counter})
+		metrics.CounterMetrics = append(metrics.CounterMetrics, entities.CounterMetric{Name: entities.PollCount, Value: *counter})
 
 		// Gauge Metrics
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.RandomValue, Value: entities.Gauge(rand.Float64())})
@@ -86,7 +84,7 @@ func collectMetrics(poolItl time.Duration, mu *sync.Mutex, metrics *entities.Met
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.StackSys, Value: entities.Gauge(currMetric.StackSys)})
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.Sys, Value: entities.Gauge(currMetric.Sys)})
 		metrics.GaugeMetrics = append(metrics.GaugeMetrics, entities.GaugeMetric{Name: entities.TotalAlloc, Value: entities.Gauge(currMetric.TotalAlloc)})
-		mu.Unlock()
+		metrics.Mu.Unlock()
 	}
 }
 
