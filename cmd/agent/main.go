@@ -28,6 +28,7 @@ func main() {
 			if err != nil {
 				agentCfg.Log.Error(fmt.Sprintf("something went wrong when publishing the counter metrics %s", err.Error()))
 			} else {
+				// reset counter on publish success
 				*counter = 0
 			}
 		}
