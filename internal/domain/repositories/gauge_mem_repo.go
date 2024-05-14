@@ -41,5 +41,10 @@ func (gmr *GaugeMemRepository) GetAll() map[string]entities.Gauge {
 		return make(map[string]entities.Gauge)
 	}
 
-	return gmr.store.Gauge
+	copyMap := make(map[string]entities.Gauge)
+	for k, v := range gmr.store.Gauge {
+		copyMap[k] = v
+	}
+
+	return copyMap
 }

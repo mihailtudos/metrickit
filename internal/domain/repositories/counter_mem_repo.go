@@ -46,5 +46,10 @@ func (cmr *CounterMemRepository) GetAll() map[string]entities.Counter {
 		return make(map[string]entities.Counter)
 	}
 
-	return cmr.store.Counter
+	copiedMap := make(map[string]entities.Counter)
+	for k, v := range cmr.store.Counter {
+		copiedMap[k] = v
+	}
+
+	return copiedMap
 }

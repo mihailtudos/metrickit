@@ -9,4 +9,7 @@ run/agent:
 run/tests:
 	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
 
-.PHONY: run/server, run/agent, run/tests
+show/cover:
+	go tool cover -html=profile.cov
+
+.PHONY: run/server, run/agent, run/tests, show/cover
