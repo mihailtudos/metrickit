@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/mihailtudos/metrickit/config"
@@ -23,6 +23,9 @@ func run(cfg *config.ServerConfig) {
 	repos := repositories.NewRepository(store)
 	h := handlers.NewHandler(service.NewService(repos, cfg.Log), cfg.Log)
 
-	fmt.Printf("running server 🔥 on port: %s\n", cfg.Address)
-	log.Fatal(http.ListenAndServe(cfg.Address, h.InitHandlers()))
+	cfg.Log.InfoContext(context.Background(), "running server 🔥", slog.String("port", cfg.Address))
+
+	if err := http.ListenAndServe(cfg.Address, h.InitHandlers()); err != nil {
+		cfg.Log.ErrorContext(context.Background(), "server failed to start: ", slog.String("error", err.Error()))
+	}
 }

@@ -5,19 +5,21 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/mihailtudos/metrickit/internal/service"
+	"github.com/mihailtudos/metrickit/pkg/middlewars"
 )
 
-type HandlerStr struct {
+type ServerHandlers struct {
 	services *service.Service
 	logger   *slog.Logger
 }
 
-func NewHandler(services *service.Service, logger *slog.Logger) *HandlerStr {
-	return &HandlerStr{services: services, logger: logger}
+func NewHandler(services *service.Service, logger *slog.Logger) *ServerHandlers {
+	return &ServerHandlers{services: services, logger: logger}
 }
 
-func (h *HandlerStr) InitHandlers() http.Handler {
+func (h *ServerHandlers) InitHandlers() http.Handler {
 	mux := chi.NewMux()
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
@@ -30,5 +32,5 @@ func (h *HandlerStr) InitHandlers() http.Handler {
 	// Content-Type: text/plain
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
 
-	return mux
+	return middlewars.WithLogging(mux, h.logger)
 }

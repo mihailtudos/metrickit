@@ -14,7 +14,7 @@ import (
 
 const staticDir = "./static"
 
-func (h *HandlerStr) showMetrics(w http.ResponseWriter, r *http.Request) {
+func (h *ServerHandlers) showMetrics(w http.ResponseWriter, r *http.Request) {
 	fileName := "index.html"
 	tmpl, err := template.ParseFiles(string(http.Dir(path.Join(staticDir, fileName))))
 	if err != nil {
@@ -30,13 +30,14 @@ func (h *HandlerStr) showMetrics(w http.ResponseWriter, r *http.Request) {
 	memStore.Gauge = gauges
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	if err := tmpl.Execute(w, memStore); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
 
-func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
+func (h *ServerHandlers) getMetricValue(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	val, err := isMetricAvailable(metricType, metricName, h)
@@ -56,9 +57,10 @@ func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 }
 
-func isMetricAvailable(metricType, metricName string, h *HandlerStr) (any, error) {
+func isMetricAvailable(metricType, metricName string, h *ServerHandlers) (any, error) {
 	if metricType == entities.CounterMetricName {
 		counterValue, ok := h.services.CounterService.Get(metricName)
 		if ok {

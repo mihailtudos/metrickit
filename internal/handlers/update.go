@@ -8,7 +8,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
-func (h *HandlerStr) handleUploads(w http.ResponseWriter, r *http.Request) {
+func (h *ServerHandlers) handleUploads(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
