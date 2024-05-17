@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"log/slog"
+
+	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 )
 
 type MetricsService interface {

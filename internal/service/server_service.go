@@ -2,9 +2,10 @@ package service
 
 import (
 	"errors"
+	"log/slog"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
-	"log/slog"
 )
 
 var ErrInvalidValue = errors.New("invalid value given")

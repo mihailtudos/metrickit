@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"log/slog"
 	"net/http"
 	"runtime"
+
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 )
 
 type MetricsCollectionService struct {
@@ -14,12 +16,14 @@ type MetricsCollectionService struct {
 	logger *slog.Logger
 }
 
-func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository, logger *slog.Logger) *MetricsCollectionService {
+func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
+	logger *slog.Logger) *MetricsCollectionService {
 	return &MetricsCollectionService{mRepo: repo, logger: logger}
 }
 
 func (m *MetricsCollectionService) Collect() {
-	m.logger.Info("collecting metrics")
+	m.logger.Log(context.Background(), slog.LevelInfo, "collecting metrics")
+
 	currMetric := runtime.MemStats{}
 	runtime.ReadMemStats(&currMetric)
 
@@ -29,42 +33,47 @@ func (m *MetricsCollectionService) Collect() {
 func (m *MetricsCollectionService) Send(serverAddr string) {
 	metrics := m.mRepo.GetAll()
 	// publish counter type metrics
-	m.logger.Info("publishing counter metrics")
+	m.logger.Log(context.Background(), slog.LevelInfo, "publishing counter metrics")
+
 	for _, v := range metrics.CounterMetrics {
 		err := publishMetric(serverAddr, v)
 		if err != nil {
-			m.logger.Error(fmt.Sprintf("something went wrong when publishing the counter metrics %s", err.Error()))
+			m.logger.Log(context.Background(),
+				slog.LevelError,
+				"something went wrong when publishing the counter metrics: "+err.Error())
 		}
 	}
 
 	// publish gauge type metrics
-	m.logger.Info("publishing gauge metrics")
+	m.logger.Log(context.Background(), slog.LevelInfo, "publishing gauge metrics")
 	for _, v := range metrics.GaugeMetrics {
 		err := publishMetric(serverAddr, v)
 		if err != nil {
-			m.logger.Error(fmt.Sprintf("something went wrong when publishing the gauge metrics %s", err.Error()))
+			m.logger.Log(context.Background(),
+				slog.LevelError,
+				"something went wrong when publishing the gauge metrics: "+err.Error())
 		}
 	}
 }
 
 func (m *MetricsCollectionService) Clear() {
-	m.logger.Info("clearing metrics")
+	m.logger.Log(context.Background(), slog.LevelInfo, "clearing metrics")
 	m.mRepo.Clear()
 }
 
-func publishMetric(ServerAddr string, metric any) error {
+func publishMetric(serverAddr string, metric any) error {
 	url := ""
 
 	switch v := metric.(type) {
 	case entities.CounterMetric:
-		url = fmt.Sprintf("http://%s/update/%s/%s/%v", ServerAddr, entities.CounterMetricName, v.Name, v.Value)
+		url = fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.CounterMetricName, v.Name, v.Value)
 	case entities.GaugeMetric:
-		url = fmt.Sprintf("http://%s/update/%s/%s/%v", ServerAddr, entities.GaugeMetricName, v.Name, v.Value)
+		url = fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.GaugeMetricName, v.Name, v.Value)
 	}
 
 	res, err := http.Post(url, "text/plain", nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to post the metric %s due to %w", url, err)
 	}
 
 	defer func(res *http.Response) {

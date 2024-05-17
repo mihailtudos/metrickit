@@ -1,10 +1,11 @@
 package flags
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDurationFlagCanBeCreatedWithDifferentTimeValues(t *testing.T) {
@@ -97,7 +98,6 @@ func TestDurationFlagCanBeSet(t *testing.T) {
 			} else {
 				require.Error(t, err)
 			}
-
 		})
 	}
 }

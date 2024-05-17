@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"github.com/mihailtudos/metrickit/internal/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/mihailtudos/metrickit/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandleUploads(t *testing.T) {
@@ -103,7 +104,7 @@ func TestHandleUploads(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(test.method, test.url, nil)
+			req := httptest.NewRequest(test.method, test.url, http.NoBody)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)
 			res := w.Result()

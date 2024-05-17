@@ -1,13 +1,14 @@
 package service
 
 import (
+	"log/slog"
+	"os"
+	"testing"
+
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"log/slog"
-	"os"
-	"testing"
 )
 
 func TestCounterService(t *testing.T) {

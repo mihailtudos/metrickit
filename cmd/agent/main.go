@@ -1,11 +1,12 @@
 package main
 
 import (
+	"time"
+
 	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service"
-	"time"
 )
 
 func main() {

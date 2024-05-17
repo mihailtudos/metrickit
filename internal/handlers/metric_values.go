@@ -3,12 +3,13 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"html/template"
 	"net/http"
 	"path"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
 const staticDir = "./static"

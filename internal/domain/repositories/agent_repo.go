@@ -1,9 +1,10 @@
 package repositories
 
 import (
+	"runtime"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
-	"runtime"
 )
 
 type MetricsCollectionRepository interface {

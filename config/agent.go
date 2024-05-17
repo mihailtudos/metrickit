@@ -2,12 +2,13 @@ package config
 
 import (
 	"flag"
-	"github.com/caarlos0/env/v11"
-	"github.com/mihailtudos/metrickit/pkg/flags"
 	"log"
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/caarlos0/env/v11"
+	"github.com/mihailtudos/metrickit/pkg/flags"
 )
 
 const DefaultReportInterval = 10
@@ -18,10 +19,10 @@ var poolIntervalInSeconds *flags.DurationFlag
 var reportIntervalInSeconds *flags.DurationFlag
 
 type AgentConfig struct {
+	Log            *slog.Logger
+	ServerAddr     string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
-	ServerAddr     string
-	Log            *slog.Logger
 }
 
 type EnvAgentConfig struct {

@@ -2,16 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"net/http"
-)
-
-const (
-	reqPartsLength = 5
-	idxMetricType  = 2
-	idxMetricName  = 3
-	idxMetricVal   = 4
 )
 
 func (h *HandlerStr) handleUploads(w http.ResponseWriter, r *http.Request) {

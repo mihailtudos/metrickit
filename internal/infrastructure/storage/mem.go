@@ -1,14 +1,15 @@
 package storage
 
 import (
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"sync"
+
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
 type MemStorage struct {
-	Mu      sync.Mutex
 	Counter map[string]entities.Counter
 	Gauge   map[string]entities.Gauge
+	Mu      sync.Mutex
 }
 
 func NewMemStorage() *MemStorage {

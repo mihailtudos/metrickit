@@ -1,11 +1,13 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"log/slog"
 	"strconv"
+
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 )
 
 type CounterMetricService struct {
@@ -23,8 +25,13 @@ func (c *CounterMetricService) Create(key string, val string) error {
 		return ErrInvalidValue
 	}
 
-	c.logger.Info(fmt.Sprintf("storing metric %s %v", key, v))
-	return c.cRepo.Create(key, entities.Counter(v))
+	c.logger.Log(context.Background(), slog.LevelInfo, fmt.Sprintf("storing metric %s %v", key, v))
+	err = c.cRepo.Create(key, entities.Counter(v))
+	if err != nil {
+		return fmt.Errorf("failed to create metric counter with key=%s val=%s due to: %w", key, val, err)
+	}
+
+	return nil
 }
 
 func (c *CounterMetricService) Get(key string) (entities.Counter, bool) {

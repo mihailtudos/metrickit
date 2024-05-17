@@ -1,22 +1,25 @@
 package service
 
 import (
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"fmt"
 	"strconv"
+
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
 type mockCounterService struct{}
 
 func (m *mockCounterService) Create(key string, val string) error {
 	if _, err := strconv.Atoi(val); err != nil {
-		return err
+		return fmt.Errorf("unable parse val=%v to int, erroor: %w", val, err)
 	}
 
 	return nil
 }
 
 func (m *mockCounterService) Get(key string) (entities.Counter, bool) {
-	return entities.Counter(2), true
+	const testValue = 2
+	return entities.Counter(testValue), true
 }
 
 func (m *mockCounterService) GetAll() map[string]entities.Counter {
@@ -27,14 +30,15 @@ type mockGaugeService struct{}
 
 func (m *mockGaugeService) Create(key string, val string) error {
 	if _, err := strconv.ParseFloat(val, 64); err != nil {
-		return err
+		return fmt.Errorf("unable parse val=%v to float64, erroor: %w", val, err)
 	}
 
 	return nil
 }
 
 func (m *mockGaugeService) Get(key string) (entities.Gauge, bool) {
-	return entities.Gauge(2.2), true
+	const testValue = 2.2
+	return entities.Gauge(testValue), true
 }
 
 func (m *mockGaugeService) GetAll() map[string]entities.Gauge {

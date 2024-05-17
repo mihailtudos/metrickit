@@ -1,6 +1,7 @@
 package flags
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,14 +24,15 @@ func (sa *ServerAddr) String() string {
 }
 
 func (sa *ServerAddr) Set(flagsValue string) error {
+	const addressPortLength = 2
 	parts := strings.Split(flagsValue, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid server addres format usage: ADDRESS:PORT (e.g: localhost:8080)")
+	if len(parts) != addressPortLength {
+		return errors.New("invalid server addres format usage: ADDRESS:PORT (e.g: localhost:8080)")
 	}
 
 	port, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to convert port string '%s' to integer: %w", parts[1], err)
 	}
 
 	sa.Port = port

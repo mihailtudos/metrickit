@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/mihailtudos/metrickit/internal/service"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/mihailtudos/metrickit/internal/service"
 )
 
 type HandlerStr struct {

@@ -1,11 +1,13 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"log/slog"
 	"strconv"
+
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 )
 
 type GaugeMetricService struct {
@@ -23,8 +25,13 @@ func (g *GaugeMetricService) Create(key string, val string) error {
 		return ErrInvalidValue
 	}
 
-	g.logger.Info(fmt.Sprintf("setting gauge: %s to %v", key, v))
-	return g.gRepo.Create(key, entities.Gauge(v))
+	g.logger.Log(context.Background(), slog.LevelInfo, fmt.Sprintf("setting gauge: %s to %v", key, v))
+	err = g.gRepo.Create(key, entities.Gauge(v))
+	if err != nil {
+		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%s due to: %w", key, val, err)
+	}
+
+	return nil
 }
 
 func (g *GaugeMetricService) Get(key string) (entities.Gauge, bool) {

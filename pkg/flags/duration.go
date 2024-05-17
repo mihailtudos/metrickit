@@ -1,7 +1,7 @@
 package flags
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
 	"time"
 )
@@ -19,13 +19,13 @@ func NewDurationFlag(durationType time.Duration, length int) *DurationFlag {
 }
 
 func (df *DurationFlag) String() string {
-	return fmt.Sprintf("%v", df.GetDuration())
+	return df.GetDuration().String()
 }
 
 func (df *DurationFlag) Set(flagsValue string) error {
 	interval, err := strconv.Atoi(flagsValue)
 	if err != nil || interval < 0 {
-		return fmt.Errorf("invalid interval specified")
+		return errors.New("invalid interval specified")
 	}
 
 	df.Length = interval

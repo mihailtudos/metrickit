@@ -1,15 +1,16 @@
 package config
 
 import (
+	"errors"
 	"flag"
-	"fmt"
-	"github.com/caarlos0/env/v11"
-	"github.com/mihailtudos/metrickit/pkg/flags"
 	"log"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/caarlos0/env/v11"
+	"github.com/mihailtudos/metrickit/pkg/flags"
 )
 
 const DefaultPort = 8080
@@ -39,8 +40,8 @@ func parseServerEnvs() {
 }
 
 type ServerConfig struct {
-	Address string
 	Log     *slog.Logger
+	Address string
 }
 
 func NewServerConfig() *ServerConfig {
@@ -51,16 +52,17 @@ func NewServerConfig() *ServerConfig {
 }
 
 func splitAddressParts(address *string) (string, int, error) {
+	const numberOfHostPortParts = 2
 	if address == nil {
-		return "", 0, fmt.Errorf("invalid address: missing parts")
+		return "", 0, errors.New("invalid address: missing parts")
 	}
 	parts := strings.Split(*address, ":")
-	if len(parts) != 2 {
-		return "", 0, fmt.Errorf("invalid address: missing parts")
+	if len(parts) != numberOfHostPortParts {
+		return "", 0, errors.New("invalid address: missing parts")
 	}
 	port, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return "", 0, fmt.Errorf("invalid address: port must be an int value")
+		return "", 0, errors.New("invalid address: port must be an int value")
 	}
 
 	return parts[0], port, nil
