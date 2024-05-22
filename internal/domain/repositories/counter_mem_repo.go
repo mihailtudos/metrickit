@@ -1,6 +1,9 @@
 package repositories
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
@@ -14,42 +17,33 @@ func NewCounterMemRepository(memStorage *storage.MemStorage) *CounterMemReposito
 }
 
 func (cmr *CounterMemRepository) Create(key string, counter entities.Counter) error {
-	cmr.store.Mu.Lock()
-	defer cmr.store.Mu.Unlock()
-
-	_, ok := cmr.store.Counter[key]
-	if !ok {
-		cmr.store.Counter[key] = counter
-	} else {
-		cmr.store.Counter[key] += counter
+	err := cmr.store.CreateCounterRecord(key, counter)
+	if err != nil {
+		return errors.New("failed to create the record: " + err.Error())
 	}
 
 	return nil
 }
 
-func (cmr *CounterMemRepository) Get(key string) (entities.Counter, bool) {
-	cmr.store.Mu.Lock()
-	defer cmr.store.Mu.Unlock()
+func (cmr *CounterMemRepository) Get(key string) (entities.Counter, error) {
+	item, err := cmr.store.GetCounterRecord(key)
 
-	if cmr.store == nil || cmr.store.Counter == nil {
-		return entities.Counter(0), false
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return entities.Counter(0), fmt.Errorf("item with key %s was not found", key)
+		}
+
+		return entities.Counter(0), errors.New("failed to get the item: " + err.Error())
 	}
-	val, ok := cmr.store.Counter[key]
-	return val, ok
+
+	return item, nil
 }
 
-func (cmr *CounterMemRepository) GetAll() map[string]entities.Counter {
-	cmr.store.Mu.Lock()
-	defer cmr.store.Mu.Unlock()
-
-	if cmr.store == nil || cmr.store.Counter == nil {
-		return make(map[string]entities.Counter)
+func (cmr *CounterMemRepository) GetAll() (map[string]entities.Counter, error) {
+	counters, err := cmr.store.GetAllCounterRecords()
+	if err != nil {
+		return nil, errors.New("failed to get the metrics: " + err.Error())
 	}
 
-	copiedMap := make(map[string]entities.Counter)
-	for k, v := range cmr.store.Counter {
-		copiedMap[k] = v
-	}
-
-	return copiedMap
+	return counters, nil
 }

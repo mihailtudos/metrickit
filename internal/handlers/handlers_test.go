@@ -8,14 +8,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mihailtudos/metrickit/internal/service"
+	"github.com/mihailtudos/metrickit/internal/service/agent"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHandleUploads(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	mockService := service.NewMockService()
+	mockService := agent.NewMockService()
 	h := NewHandler(mockService, logger).InitHandlers()
 
 	type want struct {

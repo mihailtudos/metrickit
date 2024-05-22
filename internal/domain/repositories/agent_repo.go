@@ -8,9 +8,8 @@ import (
 )
 
 type MetricsCollectionRepository interface {
-	Store(stats *runtime.MemStats)
-	GetAll() *entities.MetricsCollection
-	Clear()
+	Store(stats *runtime.MemStats) error
+	GetAll() (*entities.MetricsCollection, error)
 }
 
 type AgentRepository struct {

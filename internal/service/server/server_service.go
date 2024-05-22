@@ -1,4 +1,4 @@
-package service
+package server
 
 import (
 	"errors"
@@ -12,14 +12,14 @@ var ErrInvalidValue = errors.New("invalid value given")
 
 type CounterService interface {
 	Create(key string, val string) error
-	Get(key string) (entities.Counter, bool)
-	GetAll() map[string]entities.Counter
+	Get(key string) (entities.Counter, error)
+	GetAll() (map[string]entities.Counter, error)
 }
 
 type GaugeService interface {
 	Create(key string, val string) error
-	Get(key string) (entities.Gauge, bool)
-	GetAll() map[string]entities.Gauge
+	Get(key string) (entities.Gauge, error)
+	GetAll() (map[string]entities.Gauge, error)
 }
 
 type Service struct {

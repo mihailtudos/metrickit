@@ -3,13 +3,13 @@ package entities
 type MetricName string
 
 type MetricsCollection struct {
-	GaugeMetrics   []GaugeMetric
-	CounterMetrics []CounterMetric
+	GaugeMetrics   map[MetricName]Gauge
+	CounterMetrics map[MetricName]Counter
 }
 
 func NewMetricsCollection() *MetricsCollection {
 	return &MetricsCollection{
-		GaugeMetrics:   []GaugeMetric{},
-		CounterMetrics: []CounterMetric{},
+		GaugeMetrics:   make(map[MetricName]Gauge),
+		CounterMetrics: make(map[MetricName]Counter),
 	}
 }

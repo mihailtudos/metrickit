@@ -1,6 +1,9 @@
 package repositories
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
@@ -14,37 +17,31 @@ func NewGaugeMemRepository(memStorage *storage.MemStorage) *GaugeMemRepository {
 }
 
 func (gmr *GaugeMemRepository) Create(key string, gauge entities.Gauge) error {
-	gmr.store.Mu.Lock()
-	defer gmr.store.Mu.Unlock()
-	gmr.store.Gauge[key] = gauge
-
+	err := gmr.store.CreateGaugeRecord(key, gauge)
+	if err != nil {
+		return errors.New("failed to create gauge record: " + err.Error())
+	}
 	return nil
 }
 
-func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, bool) {
-	gmr.store.Mu.Lock()
-	defer gmr.store.Mu.Unlock()
+func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, error) {
+	item, err := gmr.store.GetGaugeRecord(key)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return entities.Gauge(0), fmt.Errorf("item with key %s was not found", key)
+		}
 
-	if gmr.store == nil || gmr.store.Gauge == nil {
-		return entities.Gauge(0), false
+		return entities.Gauge(0), errors.New("failed to get the item: " + err.Error())
 	}
 
-	v, ok := gmr.store.Gauge[key]
-	return v, ok
+	return item, nil
 }
 
-func (gmr *GaugeMemRepository) GetAll() map[string]entities.Gauge {
-	gmr.store.Mu.Lock()
-	defer gmr.store.Mu.Unlock()
-
-	if gmr.store == nil || gmr.store.Gauge == nil {
-		return make(map[string]entities.Gauge)
+func (gmr *GaugeMemRepository) GetAll() (map[string]entities.Gauge, error) {
+	gauges, err := gmr.store.GetAllGaugeRecords()
+	if err != nil {
+		return nil, errors.New("failed to get the metrics: " + err.Error())
 	}
 
-	copyMap := make(map[string]entities.Gauge)
-	for k, v := range gmr.store.Gauge {
-		copyMap[k] = v
-	}
-
-	return copyMap
+	return gauges, nil
 }

@@ -1,4 +1,4 @@
-package service
+package agent
 
 import (
 	"log/slog"
@@ -7,9 +7,8 @@ import (
 )
 
 type MetricsService interface {
-	Collect()
-	Send(serverAddr string)
-	Clear()
+	Collect() error
+	Send(serverAddr string) error
 }
 
 type AgentService struct {

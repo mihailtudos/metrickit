@@ -1,8 +1,8 @@
 package config
 
 import (
+	"errors"
 	"flag"
-	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -13,10 +13,6 @@ import (
 
 const DefaultReportInterval = 10
 const DefaultPoolInterval = 2
-
-var serverAddr *flags.ServerAddr
-var poolIntervalInSeconds *flags.DurationFlag
-var reportIntervalInSeconds *flags.DurationFlag
 
 type AgentConfig struct {
 	Log            *slog.Logger
@@ -31,26 +27,28 @@ type EnvAgentConfig struct {
 	ServerAddr     *string `env:"ADDRESS"`
 }
 
-func NewAgentConfig() *AgentConfig {
-	parseFlags()
+func NewAgentConfig() (*AgentConfig, error) {
+	cfg := AgentConfig{}
 
-	return &AgentConfig{
-		PollInterval:   poolIntervalInSeconds.GetDuration(),
-		ReportInterval: reportIntervalInSeconds.GetDuration(),
-		ServerAddr:     serverAddr.String(),
-		Log:            slog.New(slog.NewJSONHandler(os.Stdout, nil)),
+	err := parseFlags(&cfg)
+	if err != nil {
+		return nil, errors.New("failed to create agent config: " + err.Error())
 	}
+
+	cfg.Log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	return &cfg, nil
 }
 
-func parseFlags() {
+func parseFlags(agentCfg *AgentConfig) error {
 	var cfg EnvAgentConfig
 	if err := env.Parse(&cfg); err != nil {
-		log.Panic("failed to parse env vars: ", err.Error())
+		return errors.New("failed to parse env vars: " + err.Error())
 	}
 
-	serverAddr = flags.NewServerAddressFlag(DefaultAddress, DefaultPort)
-	poolIntervalInSeconds = flags.NewDurationFlag(time.Second, DefaultPoolInterval)
-	reportIntervalInSeconds = flags.NewDurationFlag(time.Second, DefaultReportInterval)
+	serverAddr := flags.NewServerAddressFlag(DefaultAddress, DefaultPort)
+	poolIntervalInSeconds := flags.NewDurationFlag(time.Second, DefaultPoolInterval)
+	reportIntervalInSeconds := flags.NewDurationFlag(time.Second, DefaultReportInterval)
 
 	_ = flag.Value(serverAddr)
 
@@ -67,6 +65,12 @@ func parseFlags() {
 
 	setConfig(cfg.ReportInterval, reportIntervalInSeconds)
 	setConfig(cfg.PollInterval, poolIntervalInSeconds)
+
+	agentCfg.PollInterval = poolIntervalInSeconds.GetDuration()
+	agentCfg.ReportInterval = reportIntervalInSeconds.GetDuration()
+	agentCfg.ServerAddr = serverAddr.String()
+
+	return nil
 }
 
 func setConfig(interval *int, config *flags.DurationFlag) {

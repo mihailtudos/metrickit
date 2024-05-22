@@ -1,10 +1,11 @@
-package service
+package agent
 
 import (
 	"fmt"
 	"strconv"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/service/server"
 )
 
 type mockCounterService struct{}
@@ -17,13 +18,13 @@ func (m *mockCounterService) Create(key string, val string) error {
 	return nil
 }
 
-func (m *mockCounterService) Get(key string) (entities.Counter, bool) {
+func (m *mockCounterService) Get(key string) (entities.Counter, error) {
 	const testValue = 2
-	return entities.Counter(testValue), true
+	return entities.Counter(testValue), nil
 }
 
-func (m *mockCounterService) GetAll() map[string]entities.Counter {
-	return make(map[string]entities.Counter)
+func (m *mockCounterService) GetAll() (map[string]entities.Counter, error) {
+	return map[string]entities.Counter{}, nil
 }
 
 type mockGaugeService struct{}
@@ -36,17 +37,17 @@ func (m *mockGaugeService) Create(key string, val string) error {
 	return nil
 }
 
-func (m *mockGaugeService) Get(key string) (entities.Gauge, bool) {
+func (m *mockGaugeService) Get(key string) (entities.Gauge, error) {
 	const testValue = 2.2
-	return entities.Gauge(testValue), true
+	return entities.Gauge(testValue), nil
 }
 
-func (m *mockGaugeService) GetAll() map[string]entities.Gauge {
-	return make(map[string]entities.Gauge)
+func (m *mockGaugeService) GetAll() (map[string]entities.Gauge, error) {
+	return map[string]entities.Gauge{}, nil
 }
 
-func NewMockService() *Service {
-	return &Service{
+func NewMockService() *server.Service {
+	return &server.Service{
 		GaugeService:   &mockGaugeService{},
 		CounterService: &mockCounterService{},
 	}

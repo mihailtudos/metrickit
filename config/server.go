@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"flag"
-	"log"
 	"log/slog"
 	"os"
 	"strconv"
@@ -22,10 +21,10 @@ type EnvServerAddress struct {
 	Address *string `env:"ADDRESS"`
 }
 
-func parseServerEnvs() {
+func parseServerEnvs() error {
 	var envConfig EnvServerAddress
 	if err := env.Parse(&envConfig); err != nil {
-		log.Panic("failed to pars ADDRESS ENV")
+		return errors.New("failed to pars ADDRESS ENV: " + err.Error())
 	}
 
 	host, port, err := splitAddressParts(envConfig.Address)
@@ -37,6 +36,8 @@ func parseServerEnvs() {
 	} else {
 		addr = flags.NewServerAddressFlag(host, port)
 	}
+
+	return nil
 }
 
 type ServerConfig struct {
@@ -44,11 +45,13 @@ type ServerConfig struct {
 	Address string
 }
 
-func NewServerConfig() *ServerConfig {
-	parseServerEnvs()
-
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	return &ServerConfig{Address: addr.String(), Log: logger}
+func NewServerConfig() (*ServerConfig, error) {
+	err := parseServerEnvs()
+	if err != nil {
+		return nil, errors.New("failed to create the config " + err.Error())
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	return &ServerConfig{Address: addr.String(), Log: logger}, nil
 }
 
 func splitAddressParts(address *string) (string, int, error) {

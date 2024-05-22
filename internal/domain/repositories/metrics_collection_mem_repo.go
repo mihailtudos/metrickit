@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"math/rand"
 	"runtime"
 
@@ -16,79 +17,64 @@ func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection) *M
 	return &MetricsCollectionMemRepository{store: collection}
 }
 
-func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) {
-	m.store.Mu.Lock()
-	defer m.store.Mu.Unlock()
-
-	if len(m.store.Collection.CounterMetrics) == 0 {
-		m.store.Collection.CounterMetrics = append(m.store.Collection.CounterMetrics,
-			entities.CounterMetric{Name: entities.PollCount, Value: 0},
-		)
+func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
+	gaugeMetrics := map[entities.MetricName]entities.Gauge{
+		entities.RandomValue:   entities.Gauge(rand.Float64()),
+		entities.Alloc:         entities.Gauge(stats.Alloc),
+		entities.BuckHashSys:   entities.Gauge(stats.BuckHashSys),
+		entities.Frees:         entities.Gauge(stats.Frees),
+		entities.GCCPUFraction: entities.Gauge(stats.GCCPUFraction),
+		entities.GCSys:         entities.Gauge(stats.GCSys),
+		entities.HeapAlloc:     entities.Gauge(stats.HeapAlloc),
+		entities.HeapIdle:      entities.Gauge(stats.HeapIdle),
+		entities.HeapInuse:     entities.Gauge(stats.HeapInuse),
+		entities.HeapObjects:   entities.Gauge(stats.HeapObjects),
+		entities.HeapReleased:  entities.Gauge(stats.HeapReleased),
+		entities.HeapSys:       entities.Gauge(stats.HeapSys),
+		entities.LastGC:        entities.Gauge(stats.LastGC),
+		entities.Lookups:       entities.Gauge(stats.Lookups),
+		entities.MCacheInuse:   entities.Gauge(stats.MCacheInuse),
+		entities.MCacheSys:     entities.Gauge(stats.MCacheSys),
+		entities.MSpanInuse:    entities.Gauge(stats.MSpanInuse),
+		entities.MSpanSys:      entities.Gauge(stats.MSpanSys),
+		entities.Mallocs:       entities.Gauge(stats.Mallocs),
+		entities.NextGC:        entities.Gauge(stats.NextGC),
+		entities.NumForcedGC:   entities.Gauge(stats.NumForcedGC),
+		entities.NumGC:         entities.Gauge(stats.NumGC),
+		entities.OtherSys:      entities.Gauge(stats.OtherSys),
+		entities.PauseTotalNs:  entities.Gauge(stats.PauseTotalNs),
+		entities.StackInuse:    entities.Gauge(stats.StackInuse),
+		entities.StackSys:      entities.Gauge(stats.StackSys),
+		entities.Sys:           entities.Gauge(stats.Sys),
+		entities.TotalAlloc:    entities.Gauge(stats.TotalAlloc),
 	}
 
-	for i, v := range m.store.Collection.CounterMetrics {
-		if v.Name == entities.PollCount {
-			m.store.Collection.CounterMetrics[i].Value++
-		}
+	if err := m.store.StoreGauge(gaugeMetrics); err != nil {
+		return errors.New("failed to store the metrics" + err.Error())
 	}
 
-	// Gauge Metrics
-	gaugeMetrics := []entities.GaugeMetric{
-		{Name: entities.RandomValue, Value: entities.Gauge(rand.Float64())},
-		{Name: entities.Alloc, Value: entities.Gauge(stats.Alloc)},
-		{Name: entities.BuckHashSys, Value: entities.Gauge(stats.BuckHashSys)},
-		{Name: entities.Frees, Value: entities.Gauge(stats.Frees)},
-		{Name: entities.GCCPUFraction, Value: entities.Gauge(stats.GCCPUFraction)},
-		{Name: entities.GCSys, Value: entities.Gauge(stats.GCSys)},
-		{Name: entities.HeapAlloc, Value: entities.Gauge(stats.HeapAlloc)},
-		{Name: entities.HeapIdle, Value: entities.Gauge(stats.HeapIdle)},
-		{Name: entities.HeapInuse, Value: entities.Gauge(stats.HeapInuse)},
-		{Name: entities.HeapObjects, Value: entities.Gauge(stats.HeapObjects)},
-		{Name: entities.HeapReleased, Value: entities.Gauge(stats.HeapReleased)},
-		{Name: entities.HeapSys, Value: entities.Gauge(stats.HeapSys)},
-		{Name: entities.LastGC, Value: entities.Gauge(stats.LastGC)},
-		{Name: entities.Lookups, Value: entities.Gauge(stats.Lookups)},
-		{Name: entities.MCacheInuse, Value: entities.Gauge(stats.MCacheInuse)},
-		{Name: entities.MCacheSys, Value: entities.Gauge(stats.MCacheSys)},
-		{Name: entities.MSpanInuse, Value: entities.Gauge(stats.MSpanInuse)},
-		{Name: entities.MSpanSys, Value: entities.Gauge(stats.MSpanSys)},
-		{Name: entities.Mallocs, Value: entities.Gauge(stats.Mallocs)},
-		{Name: entities.NextGC, Value: entities.Gauge(stats.NextGC)},
-		{Name: entities.NumForcedGC, Value: entities.Gauge(stats.NumForcedGC)},
-		{Name: entities.NumGC, Value: entities.Gauge(stats.NumGC)},
-		{Name: entities.OtherSys, Value: entities.Gauge(stats.OtherSys)},
-		{Name: entities.PauseTotalNs, Value: entities.Gauge(stats.PauseTotalNs)},
-		{Name: entities.StackInuse, Value: entities.Gauge(stats.StackInuse)},
-		{Name: entities.StackSys, Value: entities.Gauge(stats.StackSys)},
-		{Name: entities.Sys, Value: entities.Gauge(stats.Sys)},
-		{Name: entities.TotalAlloc, Value: entities.Gauge(stats.TotalAlloc)},
+	if err := m.store.StoreCounter(); err != nil {
+		return errors.New("failed to store the metrics" + err.Error())
 	}
 
-	m.store.Collection.GaugeMetrics = append(m.store.Collection.GaugeMetrics, gaugeMetrics...)
+	return nil
 }
 
-func (m *MetricsCollectionMemRepository) GetAll() *entities.MetricsCollection {
-	m.store.Mu.Lock()
-	defer m.store.Mu.Unlock()
-	collection := m.store.Collection
-	newCounterMetrics := make([]entities.CounterMetric, len(collection.CounterMetrics))
-	newGaugeMetrics := make([]entities.GaugeMetric, len(collection.GaugeMetrics))
+func (m *MetricsCollectionMemRepository) GetAll() (*entities.MetricsCollection, error) {
+	counters, err := m.store.GetCounterCollection()
+	if err != nil {
+		return nil, errors.New("failed to retrieve the Counter collection: " + err.Error())
+	}
 
-	_ = copy(newCounterMetrics, collection.CounterMetrics)
-	_ = copy(newGaugeMetrics, collection.GaugeMetrics)
+	gauges, err := m.store.GetGaugeCollection()
+	if err != nil {
+		return nil, errors.New("failed to retrieve the Gauge collection: " + err.Error())
+	}
 
 	newMetricsCollection := entities.MetricsCollection{
-		CounterMetrics: newCounterMetrics,
-		GaugeMetrics:   newGaugeMetrics,
+		CounterMetrics: counters,
+		GaugeMetrics:   gauges,
 	}
 
-	return &newMetricsCollection
-}
-
-func (m *MetricsCollectionMemRepository) Clear() {
-	m.store.Mu.Lock()
-	defer m.store.Mu.Unlock()
-
-	m.store.Collection.GaugeMetrics = m.store.Collection.GaugeMetrics[:0]
-	m.store.Collection.CounterMetrics = m.store.Collection.CounterMetrics[:0]
+	return &newMetricsCollection, nil
 }

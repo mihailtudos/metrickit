@@ -4,16 +4,17 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/mihailtudos/metrickit/internal/service/server"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/mihailtudos/metrickit/internal/service"
 )
 
 type HandlerStr struct {
-	services *service.Service
+	services *server.Service
 	logger   *slog.Logger
 }
 
-func NewHandler(services *service.Service, logger *slog.Logger) *HandlerStr {
+func NewHandler(services *server.Service, logger *slog.Logger) *HandlerStr {
 	return &HandlerStr{services: services, logger: logger}
 }
 

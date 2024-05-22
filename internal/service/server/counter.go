@@ -1,13 +1,15 @@
-package service
+package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
+	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
 type CounterMetricService struct {
@@ -25,7 +27,7 @@ func (c *CounterMetricService) Create(key string, val string) error {
 		return ErrInvalidValue
 	}
 
-	c.logger.Log(context.Background(), slog.LevelInfo, fmt.Sprintf("storing metric %s %v", key, v))
+	c.logger.DebugContext(context.Background(), fmt.Sprintf("storing metric %s %v", key, v))
 	err = c.cRepo.Create(key, entities.Counter(v))
 	if err != nil {
 		return fmt.Errorf("failed to create metric counter with key=%s val=%s due to: %w", key, val, err)
@@ -34,10 +36,24 @@ func (c *CounterMetricService) Create(key string, val string) error {
 	return nil
 }
 
-func (c *CounterMetricService) Get(key string) (entities.Counter, bool) {
-	return c.cRepo.Get(key)
+func (c *CounterMetricService) Get(key string) (entities.Counter, error) {
+	item, err := c.cRepo.Get(key)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return entities.Counter(0), err
+		}
+
+		return entities.Counter(0), errors.New("failed to get the metric: " + err.Error())
+	}
+
+	return item, nil
 }
 
-func (c *CounterMetricService) GetAll() map[string]entities.Counter {
-	return c.cRepo.GetAll()
+func (c *CounterMetricService) GetAll() (map[string]entities.Counter, error) {
+	items, err := c.cRepo.GetAll()
+	if err != nil {
+		return nil, errors.New("failed to get the counter metrics: " + err.Error())
+	}
+
+	return items, nil
 }
