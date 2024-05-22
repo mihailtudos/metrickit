@@ -55,6 +55,7 @@ func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metricName")
 	val, err := isMetricAvailable(metricType, metricName, h)
 	if err != nil {
+		h.logger.DebugContext(context.Background(), err.Error())
 		if errors.Is(err, storage.ErrNotFound) {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -70,6 +71,8 @@ func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
 	switch v := val.(type) {
 	case entities.Counter:
 		_, _ = fmt.Fprintf(w, "%v", v)
@@ -79,8 +82,6 @@ func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
 		h.logger.ErrorContext(context.Background(), "failed identify the correct metric type")
 		w.WriteHeader(http.StatusNotFound)
 	}
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 }
 
 func isMetricAvailable(metricType, metricName string, h *HandlerStr) (any, error) {
@@ -88,7 +89,7 @@ func isMetricAvailable(metricType, metricName string, h *HandlerStr) (any, error
 		counterValue, err := h.services.CounterService.Get(metricName)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				return nil, fmt.Errorf("item was not found metric type %s and metric name %s", metricType, metricName)
+				return nil, fmt.Errorf("item was not found metric type %s and metric name %s: %w", metricType, metricName, err)
 			}
 
 			return nil, errors.New("failed to get the given metric: " + err.Error())
@@ -101,7 +102,7 @@ func isMetricAvailable(metricType, metricName string, h *HandlerStr) (any, error
 		gaugeValue, err := h.services.GaugeService.Get(metricName)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				return nil, fmt.Errorf("item not found with metric type %s and metric name %s", metricType, metricName)
+				return nil, fmt.Errorf("item not found with metric type %s and metric name %s: %w", metricType, metricName, err)
 			}
 
 			return nil, errors.New("failed to get the given metric: " + err.Error())

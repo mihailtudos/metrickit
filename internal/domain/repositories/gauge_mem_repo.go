@@ -28,7 +28,7 @@ func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, error) {
 	item, err := gmr.store.GetGaugeRecord(key)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return entities.Gauge(0), fmt.Errorf("item with key %s was not found", key)
+			return entities.Gauge(0), fmt.Errorf("item with key %s was not found %w", key, err)
 		}
 
 		return entities.Gauge(0), errors.New("failed to get the item: " + err.Error())

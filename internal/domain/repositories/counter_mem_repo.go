@@ -30,7 +30,7 @@ func (cmr *CounterMemRepository) Get(key string) (entities.Counter, error) {
 
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return entities.Counter(0), fmt.Errorf("item with key %s was not found", key)
+			return entities.Counter(0), fmt.Errorf("item with key %s was not found: %w", key, err)
 		}
 
 		return entities.Counter(0), errors.New("failed to get the item: " + err.Error())
