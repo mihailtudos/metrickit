@@ -9,8 +9,8 @@ import (
 )
 
 func (h *HandlerStr) handleUploads(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	metricType := entities.MetricType(chi.URLParam(r, "metricType"))
+	metricName := entities.MetricName(chi.URLParam(r, "metricName"))
 	metricValue := chi.URLParam(r, "metricValue")
 
 	// return http.StatusNotFound if metric type is not provided
@@ -48,6 +48,6 @@ func (h *HandlerStr) handleUploads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func isMetricNameAndValueMissing(metricName, metricValue string) bool {
+func isMetricNameAndValueMissing(metricName entities.MetricName, metricValue string) bool {
 	return metricName == "" || metricValue == ""
 }

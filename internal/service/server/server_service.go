@@ -11,15 +11,15 @@ import (
 var ErrInvalidValue = errors.New("invalid value given")
 
 type CounterService interface {
-	Create(key string, val string) error
-	Get(key string) (entities.Counter, error)
-	GetAll() (map[string]entities.Counter, error)
+	Create(key entities.MetricName, val string) error
+	Get(key entities.MetricName) (entities.Counter, error)
+	GetAll() (map[entities.MetricName]entities.Counter, error)
 }
 
 type GaugeService interface {
-	Create(key string, val string) error
-	Get(key string) (entities.Gauge, error)
-	GetAll() (map[string]entities.Gauge, error)
+	Create(key entities.MetricName, val string) error
+	Get(key entities.MetricName) (entities.Gauge, error)
+	GetAll() (map[entities.MetricName]entities.Gauge, error)
 }
 
 type Service struct {

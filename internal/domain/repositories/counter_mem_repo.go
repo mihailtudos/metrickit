@@ -16,7 +16,7 @@ func NewCounterMemRepository(memStorage *storage.MemStorage) *CounterMemReposito
 	return &CounterMemRepository{store: memStorage}
 }
 
-func (cmr *CounterMemRepository) Create(key string, counter entities.Counter) error {
+func (cmr *CounterMemRepository) Create(key entities.MetricName, counter entities.Counter) error {
 	err := cmr.store.CreateCounterRecord(key, counter)
 	if err != nil {
 		return errors.New("failed to create the record: " + err.Error())
@@ -25,7 +25,7 @@ func (cmr *CounterMemRepository) Create(key string, counter entities.Counter) er
 	return nil
 }
 
-func (cmr *CounterMemRepository) Get(key string) (entities.Counter, error) {
+func (cmr *CounterMemRepository) Get(key entities.MetricName) (entities.Counter, error) {
 	item, err := cmr.store.GetCounterRecord(key)
 
 	if err != nil {
@@ -39,7 +39,7 @@ func (cmr *CounterMemRepository) Get(key string) (entities.Counter, error) {
 	return item, nil
 }
 
-func (cmr *CounterMemRepository) GetAll() (map[string]entities.Counter, error) {
+func (cmr *CounterMemRepository) GetAll() (map[entities.MetricName]entities.Counter, error) {
 	counters, err := cmr.store.GetAllCounterRecords()
 	if err != nil {
 		return nil, errors.New("failed to get the metrics: " + err.Error())

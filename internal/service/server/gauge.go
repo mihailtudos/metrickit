@@ -21,7 +21,7 @@ func NewGaugeService(repo repositories.GaugeRepository, logger *slog.Logger) *Ga
 	return &GaugeMetricService{gRepo: repo, logger: logger}
 }
 
-func (g *GaugeMetricService) Create(key string, val string) error {
+func (g *GaugeMetricService) Create(key entities.MetricName, val string) error {
 	v, err := strconv.ParseFloat(val, 64)
 	if err != nil {
 		return ErrInvalidValue
@@ -36,7 +36,7 @@ func (g *GaugeMetricService) Create(key string, val string) error {
 	return nil
 }
 
-func (g *GaugeMetricService) Get(key string) (entities.Gauge, error) {
+func (g *GaugeMetricService) Get(key entities.MetricName) (entities.Gauge, error) {
 	item, err := g.gRepo.Get(key)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -49,7 +49,7 @@ func (g *GaugeMetricService) Get(key string) (entities.Gauge, error) {
 	return item, nil
 }
 
-func (g *GaugeMetricService) GetAll() (map[string]entities.Gauge, error) {
+func (g *GaugeMetricService) GetAll() (map[entities.MetricName]entities.Gauge, error) {
 	items, err := g.gRepo.GetAll()
 	if err != nil {
 		return nil, errors.New("failed to get the gauge metrics: " + err.Error())

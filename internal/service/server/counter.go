@@ -21,7 +21,7 @@ func NewCounterService(repo repositories.CounterRepository, logger *slog.Logger)
 	return &CounterMetricService{cRepo: repo, logger: logger}
 }
 
-func (c *CounterMetricService) Create(key string, val string) error {
+func (c *CounterMetricService) Create(key entities.MetricName, val string) error {
 	v, err := strconv.ParseInt(val, 10, 64)
 	if err != nil {
 		return ErrInvalidValue
@@ -36,7 +36,7 @@ func (c *CounterMetricService) Create(key string, val string) error {
 	return nil
 }
 
-func (c *CounterMetricService) Get(key string) (entities.Counter, error) {
+func (c *CounterMetricService) Get(key entities.MetricName) (entities.Counter, error) {
 	item, err := c.cRepo.Get(key)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -49,7 +49,7 @@ func (c *CounterMetricService) Get(key string) (entities.Counter, error) {
 	return item, nil
 }
 
-func (c *CounterMetricService) GetAll() (map[string]entities.Counter, error) {
+func (c *CounterMetricService) GetAll() (map[entities.MetricName]entities.Counter, error) {
 	items, err := c.cRepo.GetAll()
 	if err != nil {
 		return nil, errors.New("failed to get the counter metrics: " + err.Error())

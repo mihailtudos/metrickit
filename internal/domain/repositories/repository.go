@@ -6,15 +6,15 @@ import (
 )
 
 type GaugeRepository interface {
-	Create(key string, gauge entities.Gauge) error
-	Get(key string) (entities.Gauge, error)
-	GetAll() (map[string]entities.Gauge, error)
+	Create(key entities.MetricName, gauge entities.Gauge) error
+	Get(key entities.MetricName) (entities.Gauge, error)
+	GetAll() (map[entities.MetricName]entities.Gauge, error)
 }
 
 type CounterRepository interface {
-	Create(key string, counter entities.Counter) error
-	Get(key string) (entities.Counter, error)
-	GetAll() (map[string]entities.Counter, error)
+	Create(key entities.MetricName, counter entities.Counter) error
+	Get(key entities.MetricName) (entities.Counter, error)
+	GetAll() (map[entities.MetricName]entities.Counter, error)
 }
 
 type Repository struct {

@@ -5,8 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +23,7 @@ func TestCounterService(t *testing.T) {
 		name  string
 		want  error
 		value string
-		key   string
+		key   entities.MetricName
 	}{
 		{
 			name:  "value is a valid numeric floating point value",

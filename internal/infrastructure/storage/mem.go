@@ -10,20 +10,20 @@ import (
 var ErrNotFound = errors.New("item not found")
 
 type MemStorage struct {
-	Counter map[string]entities.Counter
-	Gauge   map[string]entities.Gauge
+	Counter map[entities.MetricName]entities.Counter
+	Gauge   map[entities.MetricName]entities.Gauge
 	mu      sync.Mutex
 }
 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		mu:      sync.Mutex{},
-		Counter: make(map[string]entities.Counter),
-		Gauge:   make(map[string]entities.Gauge),
+		Counter: make(map[entities.MetricName]entities.Counter),
+		Gauge:   make(map[entities.MetricName]entities.Gauge),
 	}
 }
 
-func (ms *MemStorage) CreateCounterRecord(key string, record entities.Counter) error {
+func (ms *MemStorage) CreateCounterRecord(key entities.MetricName, record entities.Counter) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (ms *MemStorage) CreateCounterRecord(key string, record entities.Counter) e
 	return nil
 }
 
-func (ms *MemStorage) CreateGaugeRecord(key string, record entities.Gauge) error {
+func (ms *MemStorage) CreateGaugeRecord(key entities.MetricName, record entities.Gauge) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -45,7 +45,7 @@ func (ms *MemStorage) CreateGaugeRecord(key string, record entities.Gauge) error
 	return nil
 }
 
-func (ms *MemStorage) GetGaugeRecord(key string) (entities.Gauge, error) {
+func (ms *MemStorage) GetGaugeRecord(key entities.MetricName) (entities.Gauge, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (ms *MemStorage) GetGaugeRecord(key string) (entities.Gauge, error) {
 	return v, nil
 }
 
-func (ms *MemStorage) GetCounterRecord(key string) (entities.Counter, error) {
+func (ms *MemStorage) GetCounterRecord(key entities.MetricName) (entities.Counter, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -77,7 +77,7 @@ func (ms *MemStorage) GetCounterRecord(key string) (entities.Counter, error) {
 	return v, nil
 }
 
-func (ms *MemStorage) GetAllGaugeRecords() (map[string]entities.Gauge, error) {
+func (ms *MemStorage) GetAllGaugeRecords() (map[entities.MetricName]entities.Gauge, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -85,7 +85,7 @@ func (ms *MemStorage) GetAllGaugeRecords() (map[string]entities.Gauge, error) {
 		return nil, errors.New("storage not initialized")
 	}
 
-	copyMap := make(map[string]entities.Gauge)
+	copyMap := make(map[entities.MetricName]entities.Gauge)
 	for k, v := range ms.Gauge {
 		copyMap[k] = v
 	}
@@ -93,7 +93,7 @@ func (ms *MemStorage) GetAllGaugeRecords() (map[string]entities.Gauge, error) {
 	return copyMap, nil
 }
 
-func (ms *MemStorage) GetAllCounterRecords() (map[string]entities.Counter, error) {
+func (ms *MemStorage) GetAllCounterRecords() (map[entities.MetricName]entities.Counter, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -101,7 +101,7 @@ func (ms *MemStorage) GetAllCounterRecords() (map[string]entities.Counter, error
 		return nil, errors.New("storage not initialized")
 	}
 
-	copyMap := make(map[string]entities.Counter)
+	copyMap := make(map[entities.MetricName]entities.Counter)
 	for k, v := range ms.Counter {
 		copyMap[k] = v
 	}

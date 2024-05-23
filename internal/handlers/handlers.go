@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/mihailtudos/metrickit/internal/middleware"
 	"github.com/mihailtudos/metrickit/internal/service/server"
 
 	"github.com/go-chi/chi/v5"
@@ -20,7 +21,6 @@ func NewHandler(services *server.Service, logger *slog.Logger) *HandlerStr {
 
 func (h *HandlerStr) InitHandlers() http.Handler {
 	mux := chi.NewMux()
-
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain
 	mux.Get("/value/{metricType}/{metricName}", h.getMetricValue)
@@ -31,5 +31,5 @@ func (h *HandlerStr) InitHandlers() http.Handler {
 	// Content-Type: text/plain
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
 
-	return mux
+	return middleware.RequestLogger(mux, h.logger)
 }

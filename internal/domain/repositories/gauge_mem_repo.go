@@ -16,7 +16,7 @@ func NewGaugeMemRepository(memStorage *storage.MemStorage) *GaugeMemRepository {
 	return &GaugeMemRepository{store: memStorage}
 }
 
-func (gmr *GaugeMemRepository) Create(key string, gauge entities.Gauge) error {
+func (gmr *GaugeMemRepository) Create(key entities.MetricName, gauge entities.Gauge) error {
 	err := gmr.store.CreateGaugeRecord(key, gauge)
 	if err != nil {
 		return errors.New("failed to create gauge record: " + err.Error())
@@ -24,7 +24,7 @@ func (gmr *GaugeMemRepository) Create(key string, gauge entities.Gauge) error {
 	return nil
 }
 
-func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, error) {
+func (gmr *GaugeMemRepository) Get(key entities.MetricName) (entities.Gauge, error) {
 	item, err := gmr.store.GetGaugeRecord(key)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -37,7 +37,7 @@ func (gmr *GaugeMemRepository) Get(key string) (entities.Gauge, error) {
 	return item, nil
 }
 
-func (gmr *GaugeMemRepository) GetAll() (map[string]entities.Gauge, error) {
+func (gmr *GaugeMemRepository) GetAll() (map[entities.MetricName]entities.Gauge, error) {
 	gauges, err := gmr.store.GetAllGaugeRecords()
 	if err != nil {
 		return nil, errors.New("failed to get the metrics: " + err.Error())

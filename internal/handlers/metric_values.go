@@ -21,21 +21,21 @@ func (h *HandlerStr) showMetrics(w http.ResponseWriter, r *http.Request) {
 	fileName := "index.html"
 	tmpl, err := template.ParseFiles(string(http.Dir(path.Join(staticDir, fileName))))
 	if err != nil {
-		h.logger.ErrorContext(context.Background(), "failed to parse the template "+err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		h.logger.ErrorContext(r.Context(), "failed to parse the template: "+err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	gauges, err := h.services.GaugeService.GetAll()
 	if err != nil {
-		h.logger.ErrorContext(context.Background(), "failed to get the gauge metrics "+err.Error())
-		gauges = map[string]entities.Gauge{}
+		h.logger.ErrorContext(r.Context(), "failed to get the gauge metrics: "+err.Error())
+		gauges = map[entities.MetricName]entities.Gauge{}
 	}
 
 	counters, err := h.services.CounterService.GetAll()
 	if err != nil {
-		h.logger.ErrorContext(context.Background(), "failed to get the counter metrics "+err.Error())
-		counters = map[string]entities.Counter{}
+		h.logger.ErrorContext(r.Context(), "failed to get the counter metrics: "+err.Error())
+		counters = map[entities.MetricName]entities.Counter{}
 	}
 
 	var memStore = storage.NewMemStorage()
@@ -44,15 +44,19 @@ func (h *HandlerStr) showMetrics(w http.ResponseWriter, r *http.Request) {
 	memStore.Gauge = gauges
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.Execute(w, memStore); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	err = tmpl.Execute(w, memStore)
+
+	if err != nil {
+		h.logger.ErrorContext(r.Context(), "failed to execute template: "+err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 }
 
 func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	metricType := entities.MetricType(chi.URLParam(r, "metricType"))
+	metricName := entities.MetricName(chi.URLParam(r, "metricName"))
+
 	val, err := isMetricAvailable(metricType, metricName, h)
 	if err != nil {
 		h.logger.DebugContext(context.Background(), err.Error())
@@ -75,8 +79,10 @@ func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
 
 	switch v := val.(type) {
 	case entities.Counter:
+		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintf(w, "%v", v)
 	case entities.Gauge:
+		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintf(w, "%v", v)
 	default:
 		h.logger.ErrorContext(context.Background(), "failed identify the correct metric type")
@@ -84,7 +90,7 @@ func (h *HandlerStr) getMetricValue(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func isMetricAvailable(metricType, metricName string, h *HandlerStr) (any, error) {
+func isMetricAvailable(metricType entities.MetricType, metricName entities.MetricName, h *HandlerStr) (any, error) {
 	if metricType == entities.CounterMetricName {
 		counterValue, err := h.services.CounterService.Get(metricName)
 		if err != nil {

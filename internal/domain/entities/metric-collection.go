@@ -1,6 +1,7 @@
 package entities
 
 type MetricName string
+type MetricType string
 
 type MetricsCollection struct {
 	GaugeMetrics   map[MetricName]Gauge
