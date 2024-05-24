@@ -122,12 +122,12 @@ func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
 }
 
 func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
-	mJsonStruct, err := json.Marshal(metric)
+	mJSONStruct, err := json.Marshal(metric)
 	if err != nil {
 		return entities.ErrJSONMarshal
 	}
 
-	res, err := http.Post(url, contentType, bytes.NewBuffer(mJsonStruct))
+	res, err := http.Post(url, contentType, bytes.NewBuffer(mJSONStruct))
 	if err != nil {
 		return errors.New("failed to post metric" + err.Error())
 	}

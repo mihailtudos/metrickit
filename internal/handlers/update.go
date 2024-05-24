@@ -47,7 +47,7 @@ func (h *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			h.logger.ErrorContext(r.Context(), "failed to convert gauge value to float64", slog.String("value", metricValue))
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 		metric := entities.Metrics{ID: metricName, MType: metricType, Value: &value}
@@ -127,10 +127,16 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	}
 
 	updatedMetric, err := h.getResponseMetric(metric)
+	if err != nil {
+		h.logger.ErrorContext(r.Context(), "failed generate response")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 	response, err := json.Marshal(updatedMetric)
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to marshal the response", slog.String("body", string(body)))
-		http.Error(w, fmt.Sprintf("failed to marshal the response: %s", err), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
