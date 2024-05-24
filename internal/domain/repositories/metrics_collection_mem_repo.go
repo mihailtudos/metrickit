@@ -1,7 +1,9 @@
 package repositories
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"math/rand"
 	"runtime"
 
@@ -10,11 +12,12 @@ import (
 )
 
 type MetricsCollectionMemRepository struct {
-	store *storage.MetricsCollection
+	store  *storage.MetricsCollection
+	logger *slog.Logger
 }
 
-func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection) *MetricsCollectionMemRepository {
-	return &MetricsCollectionMemRepository{store: collection}
+func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection, logger *slog.Logger) *MetricsCollectionMemRepository {
+	return &MetricsCollectionMemRepository{store: collection, logger: logger}
 }
 
 func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
@@ -57,6 +60,7 @@ func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
 		return errors.New("failed to store the metrics" + err.Error())
 	}
 
+	m.logger.DebugContext(context.Background(), "updated metrics", slog.Int64("PoolCount", int64(m.store.Collection.CounterMetrics[entities.PollCount])))
 	return nil
 }
 

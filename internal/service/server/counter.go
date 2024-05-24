@@ -21,16 +21,13 @@ func NewCounterService(repo repositories.CounterRepository, logger *slog.Logger)
 	return &CounterMetricService{cRepo: repo, logger: logger}
 }
 
-func (c *CounterMetricService) Create(key entities.MetricName, val string) error {
-	v, err := strconv.ParseInt(val, 10, 64)
-	if err != nil {
-		return ErrInvalidValue
-	}
+func (c *CounterMetricService) Create(metric entities.Metrics) error {
+	v := strconv.Itoa(int(*metric.Delta))
 
-	c.logger.DebugContext(context.Background(), fmt.Sprintf("storing metric %s %v", key, v))
-	err = c.cRepo.Create(key, entities.Counter(v))
+	c.logger.DebugContext(context.Background(), fmt.Sprintf("storing metric %s %v", metric.ID, v))
+	err := c.cRepo.Create(entities.MetricName(metric.ID), entities.Counter(*metric.Delta))
 	if err != nil {
-		return fmt.Errorf("failed to create metric counter with key=%s val=%s due to: %w", key, val, err)
+		return fmt.Errorf("failed to create metric counter with key=%s val=%s due to: %w", metric.ID, v, err)
 	}
 
 	return nil

@@ -21,16 +21,13 @@ func NewGaugeService(repo repositories.GaugeRepository, logger *slog.Logger) *Ga
 	return &GaugeMetricService{gRepo: repo, logger: logger}
 }
 
-func (g *GaugeMetricService) Create(key entities.MetricName, val string) error {
-	v, err := strconv.ParseFloat(val, 64)
-	if err != nil {
-		return ErrInvalidValue
-	}
+func (g *GaugeMetricService) Create(metric entities.Metrics) error {
+	v := strconv.FormatFloat(float64(*metric.Value), 'f', -1, 64)
 
-	g.logger.DebugContext(context.Background(), fmt.Sprintf("setting gauge: %s to %v", key, v))
-	err = g.gRepo.Create(key, entities.Gauge(v))
+	g.logger.DebugContext(context.Background(), fmt.Sprintf("setting gauge: %s to %v", metric.ID, v))
+	err := g.gRepo.Create(entities.MetricName(metric.ID), entities.Gauge(*metric.Value))
 	if err != nil {
-		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%s due to: %w", key, val, err)
+		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%s due to: %w", metric.ID, v, err)
 	}
 
 	return nil

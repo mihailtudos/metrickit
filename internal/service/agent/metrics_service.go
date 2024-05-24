@@ -1,13 +1,15 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"runtime"
-	"strconv"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
@@ -24,13 +26,11 @@ func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
 }
 
 func (m *MetricsCollectionService) Collect() error {
-	m.logger.DebugContext(context.Background(), "collecting metrics...")
-
 	currMetric := runtime.MemStats{}
 	runtime.ReadMemStats(&currMetric)
 
 	if err := m.mRepo.Store(&currMetric); err != nil {
-		return errors.New("failed to send the metrics " + err.Error())
+		return errors.New("failed to store the metrics " + err.Error())
 	}
 
 	return nil
@@ -45,10 +45,18 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 
 	m.logger.DebugContext(context.Background(), "publishing counter metrics")
 	for k, v := range metrics.CounterMetrics {
-		val := strconv.Itoa(int(v))
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.CounterMetricName, k, val)
-		err := m.publishMetric(url)
+		url := fmt.Sprintf("http://%s/update", serverAddr)
+		val := int64(v)
+		metric := entities.Metrics{
+			ID:    string(k),
+			MType: string(entities.CounterMetricName),
+			Delta: &val,
+		}
+		err := m.publishMetric(url, metric)
 		if err != nil {
+			if errors.Is(err, entities.ErrJSONMarshal) {
+				m.logger.DebugContext(context.Background(), "failed to marshal struct to JSON : "+err.Error())
+			}
 			m.logger.DebugContext(context.Background(),
 				"something went wrong when publishing the counter metrics: "+err.Error())
 		}
@@ -57,10 +65,18 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	// publish gauge type metrics
 	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
 	for k, v := range metrics.GaugeMetrics {
-		val := strconv.FormatFloat(float64(v), 'f', -1, 64)
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.GaugeMetricName, k, val)
-		err := m.publishMetric(url)
+		url := fmt.Sprintf("http://%s/update", serverAddr)
+		val := float64(v)
+		metric := entities.Metrics{
+			ID:    string(k),
+			MType: string(entities.GaugeMetricName),
+			Value: &val,
+		}
+		err := m.publishMetric(url, metric)
 		if err != nil {
+			if errors.Is(err, entities.ErrJSONMarshal) {
+				m.logger.DebugContext(context.Background(), "failed to marshal struct to JSON : "+err.Error())
+			}
 			m.logger.ErrorContext(context.Background(),
 				"something went wrong when publishing the gauge metrics: "+err.Error())
 		}
@@ -69,8 +85,13 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	return nil
 }
 
-func (m *MetricsCollectionService) publishMetric(url string) error {
-	res, err := http.Post(url, "text/plain", nil)
+func (m *MetricsCollectionService) publishMetric(url string, metrics entities.Metrics) error {
+	mJsonStruct, err := json.Marshal(metrics)
+	if err != nil {
+		return entities.ErrJSONMarshal
+	}
+
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(mJsonStruct))
 	if err != nil {
 		return errors.New("failed to post metric" + err.Error())
 	}
@@ -81,10 +102,16 @@ func (m *MetricsCollectionService) publishMetric(url string) error {
 		}
 	}()
 
-	if res.StatusCode == http.StatusOK {
-		m.logger.InfoContext(context.Background(), "published successfully: ", slog.String("url", url))
-		return nil
+	if res.StatusCode != http.StatusOK {
+		return errors.New("failed to publish the metric " + res.Status)
 	}
 
-	return errors.New("failed to publish the metric " + res.Status)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		m.logger.ErrorContext(context.Background(), "failed to read response body"+err.Error())
+		return errors.New("failed to read response body " + err.Error())
+	}
+
+	m.logger.DebugContext(context.Background(), "published successfully: ", slog.String("response", string(body)))
+	return nil
 }
