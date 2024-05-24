@@ -21,7 +21,8 @@ func (h *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	if entities.MetricType(metricType) != entities.GaugeMetricName &&
 		entities.MetricType(metricType) != entities.CounterMetricName ||
 		metricValue == "" {
-		h.logger.ErrorContext(r.Context(), "invalid metric type")
+		h.logger.ErrorContext(r.Context(),
+			"invalid metric type")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -32,27 +33,36 @@ func (h *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	case entities.CounterMetricName:
 		delta, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			h.logger.ErrorContext(r.Context(), "failed to convert counter value to integer", slog.String("delta", metricValue))
+			h.logger.ErrorContext(r.Context(),
+				"failed to convert counter value to integer",
+				slog.String("delta", metricValue))
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
 		metric := entities.Metrics{ID: metricName, MType: metricType, Delta: &delta}
 		if err = h.services.CounterService.Create(metric); err != nil {
-			h.logger.ErrorContext(r.Context(), "failed to create the metric", slog.String("err", err.Error()), slog.String("url", r.RequestURI))
+			h.logger.ErrorContext(r.Context(),
+				"failed to create the metric",
+				slog.String("err", err.Error()), slog.String("url", r.RequestURI))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	case entities.GaugeMetricName:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			h.logger.ErrorContext(r.Context(), "failed to convert gauge value to float64", slog.String("value", metricValue))
+			h.logger.ErrorContext(r.Context(),
+				"failed to convert gauge value to float64",
+				slog.String("value", metricValue))
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 		metric := entities.Metrics{ID: metricName, MType: metricType, Value: &value}
 		if err = h.services.GaugeService.Create(metric); err != nil {
-			h.logger.ErrorContext(r.Context(), "failed to create the metric", slog.String("err", err.Error()), slog.String("url", r.RequestURI))
+			h.logger.ErrorContext(r.Context(),
+				"failed to create the metric",
+				slog.String("err", err.Error()),
+				slog.String("url", r.RequestURI))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -76,13 +86,16 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	}
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			h.logger.ErrorContext(r.Context(), "failed to close request body")
+			h.logger.ErrorContext(r.Context(),
+				"failed to close request body")
 		}
 	}()
 
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
-		h.logger.ErrorContext(r.Context(), "failed to unmarshal the request", slog.String("body", string(body)))
+		h.logger.ErrorContext(r.Context(),
+			"failed to unmarshal the request",
+			slog.String("body", string(body)))
 		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
 		return
 	}
@@ -135,14 +148,18 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 
 	response, err := json.Marshal(updatedMetric)
 	if err != nil {
-		h.logger.ErrorContext(r.Context(), "failed to marshal the response", slog.String("body", string(body)))
+		h.logger.ErrorContext(r.Context(),
+			"failed to marshal the response",
+			slog.String("body", string(body)))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	if _, err = w.Write(response); err != nil {
-		h.logger.ErrorContext(r.Context(), "failed to write the response", slog.String("response", string(response)))
+		h.logger.ErrorContext(r.Context(),
+			"failed to write the response",
+			slog.String("response", string(response)))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }

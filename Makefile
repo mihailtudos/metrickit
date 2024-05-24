@@ -15,6 +15,13 @@ show/cover:
 gci/report:
 	cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json
 
+autotest/run7:
+	TEMP_FILE=out.txt metricstest -test.v -test.run=^TestIteration7 \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=.-agent-binary-path=cmd/agent/agent \
+
 .PHONY: run/server, run/agent, run/tests, show/cover, gci/report
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache

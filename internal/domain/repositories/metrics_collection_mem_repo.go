@@ -16,7 +16,8 @@ type MetricsCollectionMemRepository struct {
 	logger *slog.Logger
 }
 
-func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection, logger *slog.Logger) *MetricsCollectionMemRepository {
+func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection,
+	logger *slog.Logger) *MetricsCollectionMemRepository {
 	return &MetricsCollectionMemRepository{store: collection, logger: logger}
 }
 
@@ -60,7 +61,9 @@ func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
 		return errors.New("failed to store the metrics" + err.Error())
 	}
 
-	m.logger.DebugContext(context.Background(), "updated metrics", slog.Int64("PoolCount", int64(m.store.Collection.CounterMetrics[entities.PollCount])))
+	m.logger.DebugContext(context.Background(),
+		"updated metrics",
+		slog.Int64("PoolCount", int64(m.store.Collection.CounterMetrics[entities.PollCount])))
 	return nil
 }
 

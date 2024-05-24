@@ -81,7 +81,7 @@ func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
 
 	m.logger.DebugContext(context.Background(), "publishing counter metrics")
 	for k, v := range metrics.CounterMetrics {
-		url := fmt.Sprintf("http://%s/update", serverAddr)
+		url := fmt.Sprintf("http://%s/update/", serverAddr)
 		val := int64(v)
 		metric := entities.Metrics{
 			ID:    string(k),
@@ -101,7 +101,7 @@ func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
 	// publish gauge type metrics
 	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
 	for k, v := range metrics.GaugeMetrics {
-		url := fmt.Sprintf("http://%s/update", serverAddr)
+		url := fmt.Sprintf("http://%s/update/", serverAddr)
 		val := float64(v)
 		metric := entities.Metrics{
 			ID:    string(k),

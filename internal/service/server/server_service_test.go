@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"os"
 	"testing"
@@ -10,6 +9,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 

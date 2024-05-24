@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
-	"log/slog"
 )
 
 type GaugeMetricService struct {
@@ -20,10 +21,13 @@ func NewGaugeService(repo repositories.GaugeRepository, logger *slog.Logger) *Ga
 }
 
 func (g *GaugeMetricService) Create(metric entities.Metrics) error {
-	g.logger.DebugContext(context.Background(), fmt.Sprintf("setting gauge: %s to %v", metric.ID, *metric.Value))
+	g.logger.DebugContext(context.Background(),
+		fmt.Sprintf("setting gauge: %s to %v",
+			metric.ID, *metric.Value))
 	err := g.gRepo.Create(metric)
 	if err != nil {
-		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%v due to: %w", metric.ID, *metric.Value, err)
+		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%v due to: %w",
+			metric.ID, *metric.Value, err)
 	}
 
 	return nil

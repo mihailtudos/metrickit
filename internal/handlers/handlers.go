@@ -31,8 +31,8 @@ func (h *ServerHandler) InitHandlers() http.Handler {
 	// Content-Type: text/plain
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
 
-	mux.Post("/update", h.handleJSONUploads)
-	mux.Post("/value", h.getJSONMetricValue)
+	mux.Post("/update/", h.handleJSONUploads)
+	mux.Post("/value/", h.getJSONMetricValue)
 
 	return middleware.RequestLogger(mux, h.logger)
 }

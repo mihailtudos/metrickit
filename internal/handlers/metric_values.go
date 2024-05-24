@@ -20,6 +20,8 @@ const staticDir = "./static"
 
 var ErrUnknownMetric = errors.New("unknown metric type")
 
+const ContentTypeHeaderName = "Content-Type"
+
 func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	fileName := "index.html"
 	tmpl, err := template.ParseFiles(path.Join(staticDir, fileName))
@@ -46,7 +48,7 @@ func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	memStore.Counter = counters
 	memStore.Gauge = gauges
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set(ContentTypeHeaderName, "text/html; charset=utf-8")
 	err = tmpl.Execute(w, memStore)
 
 	if err != nil {
@@ -79,7 +81,7 @@ func (h *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set(ContentTypeHeaderName, "text/plain; charset=utf-8")
 	switch entities.MetricType(currentMetric.MType) {
 	case entities.CounterMetricName:
 		w.WriteHeader(http.StatusOK)
@@ -128,7 +130,7 @@ func (h *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set(ContentTypeHeaderName, "application/json; charset=utf-8")
 	jsonMetric, err := json.MarshalIndent(currentMetric, "", "  ")
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to marshal metric: "+err.Error())
@@ -148,7 +150,7 @@ func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, e
 		counterValue, err := h.services.CounterService.Get(entities.MetricName(metric.ID))
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.MType, err)
+				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.ID, err)
 			}
 
 			return nil, errors.New("failed to get the given metric: " + err.Error())
@@ -162,7 +164,7 @@ func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, e
 		gaugeValue, err := h.services.GaugeService.Get(entities.MetricName(metric.ID))
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.MType, err)
+				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.ID, err)
 			}
 
 			return nil, errors.New("failed to get the given metric: " + err.Error())
