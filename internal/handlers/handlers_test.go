@@ -43,7 +43,7 @@ func TestHandleUploads(t *testing.T) {
 			url:    "/update/",
 			method: http.MethodPost,
 			want: want{
-				code:        http.StatusNotFound,
+				code:        http.StatusBadRequest,
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
