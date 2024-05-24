@@ -16,8 +16,8 @@ func NewCounterMemRepository(memStorage *storage.MemStorage) *CounterMemReposito
 	return &CounterMemRepository{store: memStorage}
 }
 
-func (cmr *CounterMemRepository) Create(key entities.MetricName, counter entities.Counter) error {
-	err := cmr.store.CreateCounterRecord(key, counter)
+func (cmr *CounterMemRepository) Create(metric entities.Metrics) error {
+	err := cmr.store.CreateCounterRecord(metric)
 	if err != nil {
 		return errors.New("failed to create the record: " + err.Error())
 	}

@@ -16,8 +16,8 @@ func NewGaugeMemRepository(memStorage *storage.MemStorage) *GaugeMemRepository {
 	return &GaugeMemRepository{store: memStorage}
 }
 
-func (gmr *GaugeMemRepository) Create(key entities.MetricName, gauge entities.Gauge) error {
-	err := gmr.store.CreateGaugeRecord(key, gauge)
+func (gmr *GaugeMemRepository) Create(metric entities.Metrics) error {
+	err := gmr.store.CreateGaugeRecord(metric)
 	if err != nil {
 		return errors.New("failed to create gauge record: " + err.Error())
 	}

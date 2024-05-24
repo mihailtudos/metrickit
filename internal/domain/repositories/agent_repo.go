@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"log/slog"
 	"runtime"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
@@ -16,8 +17,8 @@ type AgentRepository struct {
 	MetricsCollectionRepository
 }
 
-func NewAgentRepository(store *storage.MetricsCollection) *AgentRepository {
+func NewAgentRepository(store *storage.MetricsCollection, logger *slog.Logger) *AgentRepository {
 	return &AgentRepository{
-		MetricsCollectionRepository: NewMetricsCollectionMemRepository(store),
+		MetricsCollectionRepository: NewMetricsCollectionMemRepository(store, logger),
 	}
 }

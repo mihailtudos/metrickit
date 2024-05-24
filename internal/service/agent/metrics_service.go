@@ -1,9 +1,12 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"runtime"
@@ -30,7 +33,7 @@ func (m *MetricsCollectionService) Collect() error {
 	runtime.ReadMemStats(&currMetric)
 
 	if err := m.mRepo.Store(&currMetric); err != nil {
-		return errors.New("failed to send the metrics " + err.Error())
+		return errors.New("failed to store the metrics " + err.Error())
 	}
 
 	return nil
@@ -47,7 +50,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	for k, v := range metrics.CounterMetrics {
 		val := strconv.Itoa(int(v))
 		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.CounterMetricName, k, val)
-		err := m.publishMetric(url)
+		err = m.publishMetric(url, "text/plain", nil)
 		if err != nil {
 			m.logger.DebugContext(context.Background(),
 				"something went wrong when publishing the counter metrics: "+err.Error())
@@ -59,7 +62,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	for k, v := range metrics.GaugeMetrics {
 		val := strconv.FormatFloat(float64(v), 'f', -1, 64)
 		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.GaugeMetricName, k, val)
-		err := m.publishMetric(url)
+		err = m.publishMetric(url, "text/plain", nil)
 		if err != nil {
 			m.logger.ErrorContext(context.Background(),
 				"something went wrong when publishing the gauge metrics: "+err.Error())
@@ -69,8 +72,62 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	return nil
 }
 
-func (m *MetricsCollectionService) publishMetric(url string) error {
-	res, err := http.Post(url, "text/plain", nil)
+func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
+	metrics, err := m.mRepo.GetAll()
+	if err != nil {
+		m.logger.ErrorContext(context.Background(), fmt.Sprintf("failed to send the metrics: %v", err))
+		return errors.New("failed to send the metrics: " + err.Error())
+	}
+
+	m.logger.DebugContext(context.Background(), "publishing counter metrics")
+	for k, v := range metrics.CounterMetrics {
+		url := fmt.Sprintf("http://%s/update", serverAddr)
+		val := int64(v)
+		metric := entities.Metrics{
+			ID:    string(k),
+			MType: string(entities.CounterMetricName),
+			Delta: &val,
+		}
+		err := m.publishMetric(url, "application/json", &metric)
+		if err != nil {
+			if errors.Is(err, entities.ErrJSONMarshal) {
+				m.logger.DebugContext(context.Background(), "failed to marshal struct to JSON : "+err.Error())
+			}
+			m.logger.DebugContext(context.Background(),
+				"something went wrong when publishing the counter metrics: "+err.Error())
+		}
+	}
+
+	// publish gauge type metrics
+	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
+	for k, v := range metrics.GaugeMetrics {
+		url := fmt.Sprintf("http://%s/update", serverAddr)
+		val := float64(v)
+		metric := entities.Metrics{
+			ID:    string(k),
+			MType: string(entities.GaugeMetricName),
+			Value: &val,
+		}
+		err := m.publishMetric(url, "application/json", &metric)
+		if err != nil {
+			if errors.Is(err, entities.ErrJSONMarshal) {
+				m.logger.DebugContext(context.Background(), "failed to marshal struct to JSON : "+err.Error())
+			}
+			m.logger.ErrorContext(context.Background(),
+				"something went wrong when publishing the gauge metrics: "+err.Error())
+		}
+	}
+
+	return nil
+}
+
+func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
+	mJsonStruct, err := json.Marshal(metric)
+	if err != nil {
+		return entities.ErrJSONMarshal
+	}
+
+	res, err := http.Post(url, contentType, bytes.NewBuffer(mJsonStruct))
 	if err != nil {
 		return errors.New("failed to post metric" + err.Error())
 	}
@@ -81,10 +138,16 @@ func (m *MetricsCollectionService) publishMetric(url string) error {
 		}
 	}()
 
-	if res.StatusCode == http.StatusOK {
-		m.logger.InfoContext(context.Background(), "published successfully: ", slog.String("url", url))
-		return nil
+	if res.StatusCode != http.StatusOK {
+		return errors.New("failed to publish the metric " + res.Status)
 	}
 
-	return errors.New("failed to publish the metric " + res.Status)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		m.logger.ErrorContext(context.Background(), "failed to read response body"+err.Error())
+		return errors.New("failed to read response body " + err.Error())
+	}
+
+	m.logger.DebugContext(context.Background(), "published successfully: ", slog.String("response", string(body)))
+	return nil
 }

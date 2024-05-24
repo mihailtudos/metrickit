@@ -35,7 +35,7 @@ func (m *MetricsCollection) StoreCounter() error {
 	}
 
 	if _, ok := m.Collection.CounterMetrics[entities.PollCount]; !ok {
-		m.Collection.GaugeMetrics[entities.PollCount] = 0
+		m.Collection.CounterMetrics[entities.PollCount] = 0
 	}
 
 	m.Collection.CounterMetrics[entities.PollCount]++

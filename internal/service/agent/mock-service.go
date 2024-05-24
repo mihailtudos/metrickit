@@ -1,20 +1,13 @@
 package agent
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/service/server"
 )
 
 type mockCounterService struct{}
 
-func (m *mockCounterService) Create(key entities.MetricName, val string) error {
-	if _, err := strconv.Atoi(val); err != nil {
-		return fmt.Errorf("unable parse val=%v to int, erroor: %w", val, err)
-	}
-
+func (m *mockCounterService) Create(metric entities.Metrics) error {
 	return nil
 }
 
@@ -29,11 +22,7 @@ func (m *mockCounterService) GetAll() (map[entities.MetricName]entities.Counter,
 
 type mockGaugeService struct{}
 
-func (m *mockGaugeService) Create(key entities.MetricName, val string) error {
-	if _, err := strconv.ParseFloat(val, 64); err != nil {
-		return fmt.Errorf("unable parse val=%v to float64, erroor: %w", val, err)
-	}
-
+func (m *mockGaugeService) Create(metric entities.Metrics) error {
 	return nil
 }
 

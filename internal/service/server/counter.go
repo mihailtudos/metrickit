@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"strconv"
-
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
+	"log/slog"
 )
 
 type CounterMetricService struct {
@@ -21,16 +19,11 @@ func NewCounterService(repo repositories.CounterRepository, logger *slog.Logger)
 	return &CounterMetricService{cRepo: repo, logger: logger}
 }
 
-func (c *CounterMetricService) Create(key entities.MetricName, val string) error {
-	v, err := strconv.ParseInt(val, 10, 64)
+func (c *CounterMetricService) Create(metric entities.Metrics) error {
+	c.logger.DebugContext(context.Background(), fmt.Sprintf("updating %s metric", metric.ID))
+	err := c.cRepo.Create(metric)
 	if err != nil {
-		return ErrInvalidValue
-	}
-
-	c.logger.DebugContext(context.Background(), fmt.Sprintf("storing metric %s %v", key, v))
-	err = c.cRepo.Create(key, entities.Counter(v))
-	if err != nil {
-		return fmt.Errorf("failed to create metric counter with key=%s val=%s due to: %w", key, val, err)
+		return fmt.Errorf("failed to create metric counter with key=%s val=%v due to: %w", metric.ID, *metric.Delta, err)
 	}
 
 	return nil

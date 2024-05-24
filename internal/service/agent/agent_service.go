@@ -9,6 +9,7 @@ import (
 type MetricsService interface {
 	Collect() error
 	Send(serverAddr string) error
+	SendJSONMetric(serverAddr string) error
 }
 
 type AgentService struct {

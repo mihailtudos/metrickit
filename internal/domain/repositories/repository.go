@@ -6,13 +6,13 @@ import (
 )
 
 type GaugeRepository interface {
-	Create(key entities.MetricName, gauge entities.Gauge) error
+	Create(metric entities.Metrics) error
 	Get(key entities.MetricName) (entities.Gauge, error)
 	GetAll() (map[entities.MetricName]entities.Gauge, error)
 }
 
 type CounterRepository interface {
-	Create(key entities.MetricName, counter entities.Counter) error
+	Create(metric entities.Metrics) error
 	Get(key entities.MetricName) (entities.Counter, error)
 	GetAll() (map[entities.MetricName]entities.Counter, error)
 }

@@ -23,25 +23,25 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) CreateCounterRecord(key entities.MetricName, record entities.Counter) error {
+func (ms *MemStorage) CreateCounterRecord(metric entities.Metrics) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
-	_, ok := ms.Counter[key]
+	_, ok := ms.Counter[entities.MetricName(metric.ID)]
 	if !ok {
-		ms.Counter[key] = record
+		ms.Counter[entities.MetricName(metric.ID)] = entities.Counter(*metric.Delta)
 	} else {
-		ms.Counter[key] += record
+		ms.Counter[entities.MetricName(metric.ID)] += entities.Counter(*metric.Delta)
 	}
 
 	return nil
 }
 
-func (ms *MemStorage) CreateGaugeRecord(key entities.MetricName, record entities.Gauge) error {
+func (ms *MemStorage) CreateGaugeRecord(metric entities.Metrics) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
-	ms.Gauge[key] = record
+	ms.Gauge[entities.MetricName(metric.ID)] = entities.Gauge(*metric.Value)
 	return nil
 }
 

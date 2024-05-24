@@ -10,16 +10,16 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type HandlerStr struct {
+type ServerHandler struct {
 	services *server.Service
 	logger   *slog.Logger
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger) *HandlerStr {
-	return &HandlerStr{services: services, logger: logger}
+func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
+	return &ServerHandler{services: services, logger: logger}
 }
 
-func (h *HandlerStr) InitHandlers() http.Handler {
+func (h *ServerHandler) InitHandlers() http.Handler {
 	mux := chi.NewMux()
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain
@@ -30,6 +30,9 @@ func (h *HandlerStr) InitHandlers() http.Handler {
 	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VALUE>
 	// Content-Type: text/plain
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
+
+	mux.Post("/update", h.handleJSONUploads)
+	mux.Post("/value", h.getJSONMetricValue)
 
 	return middleware.RequestLogger(mux, h.logger)
 }

@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"strconv"
-
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
+	"log/slog"
 )
 
 type GaugeMetricService struct {
@@ -21,16 +19,11 @@ func NewGaugeService(repo repositories.GaugeRepository, logger *slog.Logger) *Ga
 	return &GaugeMetricService{gRepo: repo, logger: logger}
 }
 
-func (g *GaugeMetricService) Create(key entities.MetricName, val string) error {
-	v, err := strconv.ParseFloat(val, 64)
+func (g *GaugeMetricService) Create(metric entities.Metrics) error {
+	g.logger.DebugContext(context.Background(), fmt.Sprintf("setting gauge: %s to %v", metric.ID, *metric.Value))
+	err := g.gRepo.Create(metric)
 	if err != nil {
-		return ErrInvalidValue
-	}
-
-	g.logger.DebugContext(context.Background(), fmt.Sprintf("setting gauge: %s to %v", key, v))
-	err = g.gRepo.Create(key, entities.Gauge(v))
-	if err != nil {
-		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%s due to: %w", key, val, err)
+		return fmt.Errorf("unable to create the gauge metric with key=%s and value=%v due to: %w", metric.ID, *metric.Value, err)
 	}
 
 	return nil
