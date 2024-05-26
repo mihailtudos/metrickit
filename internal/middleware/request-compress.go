@@ -18,7 +18,6 @@ var compressibleContentTypes = map[string]struct{}{
 
 type compressResponseWriter struct {
 	http.ResponseWriter
-	w            io.Writer
 	gzipWriter   *gzip.Writer
 	compressible bool
 	wroteHeader  bool

@@ -6,18 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
-const staticDir = "./templates"
-
 var ErrUnknownMetric = errors.New("unknown metric type")
+var ContentType = "Content-Type"
 
 func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(h.TemplatesFs)
@@ -45,7 +45,7 @@ func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	memStore.Counter = counters
 	memStore.Gauge = gauges
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set(ContentType, "text/html; charset=utf-8")
 	err = tmpl.ExecuteTemplate(w, "index.html", memStore)
 
 	if err != nil {
@@ -78,7 +78,7 @@ func (h *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set(ContentType, "text/plain; charset=utf-8")
 	switch entities.MetricType(currentMetric.MType) {
 	case entities.CounterMetricName:
 		w.WriteHeader(http.StatusOK)
@@ -127,7 +127,7 @@ func (h *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set(ContentType, "application/json; charset=utf-8")
 	jsonMetric, err := json.MarshalIndent(currentMetric, "", "  ")
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to marshal metric: "+err.Error())
