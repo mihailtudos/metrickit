@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"embed"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,10 +15,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var templatesFs embed.FS
+
 func TestHandleUploads(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	mockService := agent.NewMockService()
-	h := NewHandler(mockService, logger).InitHandlers()
+	h := NewHandler(mockService, logger, templatesFs).InitHandlers()
 
 	type want struct {
 		code        int
