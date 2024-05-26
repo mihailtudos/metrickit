@@ -2,29 +2,26 @@ package handlers
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
-	"path"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
-const staticDir = "./static"
+const staticDir = "./templates"
 
 var ErrUnknownMetric = errors.New("unknown metric type")
 
-const ContentTypeHeaderName = "Content-Type"
-
 func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
-	fileName := "index.html"
-	tmpl, err := template.ParseFiles(path.Join(staticDir, fileName))
+	fmt.Println(h.TemplatesFs)
+	tmpl, err := template.ParseFS(h.TemplatesFs, "templates/index.html")
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to parse the template: "+err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -48,8 +45,8 @@ func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	memStore.Counter = counters
 	memStore.Gauge = gauges
 
-	w.Header().Set(ContentTypeHeaderName, "text/html; charset=utf-8")
-	err = tmpl.Execute(w, memStore)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err = tmpl.ExecuteTemplate(w, "index.html", memStore)
 
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to execute template: "+err.Error())
@@ -81,7 +78,7 @@ func (h *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(ContentTypeHeaderName, "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	switch entities.MetricType(currentMetric.MType) {
 	case entities.CounterMetricName:
 		w.WriteHeader(http.StatusOK)
@@ -130,7 +127,7 @@ func (h *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set(ContentTypeHeaderName, "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	jsonMetric, err := json.MarshalIndent(currentMetric, "", "  ")
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to marshal metric: "+err.Error())
@@ -150,7 +147,7 @@ func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, e
 		counterValue, err := h.services.CounterService.Get(entities.MetricName(metric.ID))
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.ID, err)
+				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.MType, err)
 			}
 
 			return nil, errors.New("failed to get the given metric: " + err.Error())
@@ -164,7 +161,7 @@ func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, e
 		gaugeValue, err := h.services.GaugeService.Get(entities.MetricName(metric.ID))
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.ID, err)
+				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.MType, err)
 			}
 
 			return nil, errors.New("failed to get the given metric: " + err.Error())

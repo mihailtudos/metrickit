@@ -22,7 +22,14 @@ autotest/run7:
         -server-port=8080 \
         -source-path=.-agent-binary-path=cmd/agent/agent \
 
-.PHONY: run/server, run/agent, run/tests, show/cover, gci/report
+autotest/run8:
+	TEMP_FILE=out.txt metricstest -test.v -test.run=^TestIteration8$ \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=.-agent-binary-path=cmd/agent/agent \
+
+.PHONY: run/server, run/agent, run/tests, show/cover, gci/report, autotest/run8, autotest/run7
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 

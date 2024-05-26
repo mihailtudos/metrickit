@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"embed"
 	"log/slog"
 	"net/http"
 
@@ -11,12 +12,13 @@ import (
 )
 
 type ServerHandler struct {
-	services *server.Service
-	logger   *slog.Logger
+	services    *server.Service
+	logger      *slog.Logger
+	TemplatesFs embed.FS
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
-	return &ServerHandler{services: services, logger: logger}
+func NewHandler(services *server.Service, logger *slog.Logger, fs embed.FS) *ServerHandler {
+	return &ServerHandler{services: services, logger: logger, TemplatesFs: fs}
 }
 
 func (h *ServerHandler) InitHandlers() http.Handler {

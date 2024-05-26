@@ -18,6 +18,7 @@ var compressibleContentTypes = map[string]struct{}{
 
 type compressResponseWriter struct {
 	http.ResponseWriter
+	w            io.Writer
 	gzipWriter   *gzip.Writer
 	compressible bool
 	wroteHeader  bool
@@ -28,7 +29,7 @@ func (crw *compressResponseWriter) Write(p []byte) (int, error) {
 		crw.WriteHeader(http.StatusOK)
 	}
 	wb, err := crw.writer().Write(p)
-	return wb, fmt.Errorf("failed to wrote body %w", err)
+	return wb, fmt.Errorf("failed to write content: %w", err)
 }
 
 func (crw *compressResponseWriter) writer() io.Writer {
