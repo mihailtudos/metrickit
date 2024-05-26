@@ -133,7 +133,7 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 		return errors.New("failed to compress metric: " + err.Error())
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(gzipBuffer))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(gzipBuffer))
 	if err != nil {
 		return errors.New("failed to create HTTP request: " + err.Error())
 	}

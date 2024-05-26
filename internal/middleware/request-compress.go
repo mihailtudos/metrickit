@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"github.com/mihailtudos/metrickit/pkg/compressor"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/mihailtudos/metrickit/pkg/compressor"
 )
 
 var compressibleContentTypes = map[string]struct{}{
@@ -17,7 +18,6 @@ var compressibleContentTypes = map[string]struct{}{
 
 type compressResponseWriter struct {
 	http.ResponseWriter
-	w            io.Writer
 	gzipWriter   *gzip.Writer
 	compressible bool
 	wroteHeader  bool
@@ -27,7 +27,8 @@ func (crw *compressResponseWriter) Write(p []byte) (int, error) {
 	if !crw.wroteHeader {
 		crw.WriteHeader(http.StatusOK)
 	}
-	return crw.writer().Write(p)
+	wb, err := crw.writer().Write(p)
+	return wb, fmt.Errorf("failed to wrote body %w", err)
 }
 
 func (crw *compressResponseWriter) writer() io.Writer {
@@ -92,7 +93,11 @@ func WithCompressedResponse(next http.Handler) http.Handler {
 		next.ServeHTTP(crw, r)
 
 		if crw.compressible && crw.gzipWriter != nil {
-			crw.gzipWriter.Close()
+			defer func() {
+				if err := crw.gzipWriter.Close(); err != nil {
+					fmt.Println("Error closing gzip writer:", err)
+				}
+			}()
 		}
 	})
 }

@@ -10,17 +10,17 @@ func Compress(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	w, err := flate.NewWriter(&b, flate.BestSpeed)
 	if err != nil {
-		return nil, fmt.Errorf("failed init compress writer: %v", err)
+		return nil, fmt.Errorf("failed init compress writer: %w", err)
 	}
 
 	_, err = w.Write(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
+		return nil, fmt.Errorf("failed write data to compress temporary buffer: %w", err)
 	}
 
 	err = w.Close()
 	if err != nil {
-		return nil, fmt.Errorf("failed compress data: %v", err)
+		return nil, fmt.Errorf("failed compress data: %w", err)
 	}
 
 	return b.Bytes(), nil

@@ -43,9 +43,8 @@ func RequestLogger(h http.Handler, logger *slog.Logger) http.Handler {
 
 		respData := &responseData{status: http.StatusOK}
 		lw := &logWriter{responseData: respData, ResponseWriter: w}
-		
-		h.ServeHTTP(lw, r)
 
+		h.ServeHTTP(lw, r)
 		duration := time.Since(start)
 
 		logger.InfoContext(r.Context(),
