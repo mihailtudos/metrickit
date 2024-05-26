@@ -28,7 +28,11 @@ func (crw *compressResponseWriter) Write(p []byte) (int, error) {
 	if !crw.wroteHeader {
 		crw.WriteHeader(http.StatusOK)
 	}
-	return crw.writer().Write(p)
+	wb, err := crw.writer().Write(p)
+	if err != nil {
+		return 0, fmt.Errorf("failed to write content: %w", err)
+	}
+	return wb, nil
 }
 
 func (crw *compressResponseWriter) writer() io.Writer {
