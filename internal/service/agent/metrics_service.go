@@ -14,6 +14,7 @@ import (
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
+	"github.com/mihailtudos/metrickit/pkg/compressor"
 )
 
 type MetricsCollectionService struct {
@@ -127,7 +128,20 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 		return entities.ErrJSONMarshal
 	}
 
-	res, err := http.Post(url, contentType, bytes.NewBuffer(mJSONStruct))
+	gzipBuffer, err := compressor.Compress(mJSONStruct)
+	if err != nil {
+		return errors.New("failed to compress metric: " + err.Error())
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(gzipBuffer))
+	if err != nil {
+		return errors.New("failed to create HTTP request: " + err.Error())
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Content-Encoding", "gzip")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		return errors.New("failed to post metric" + err.Error())
 	}

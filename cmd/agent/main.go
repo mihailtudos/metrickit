@@ -32,7 +32,7 @@ func main() {
 				agentCfg.Log.ErrorContext(context.Background(), "failed to collect the metrics: "+err.Error())
 			}
 		case <-reportTicker.C:
-			if err := metricsService.SendJSONMetric(agentCfg.ServerAddr); err != nil {
+			if err := metricsService.Send(agentCfg.ServerAddr); err != nil {
 				agentCfg.Log.ErrorContext(context.Background(), "failed to publish the metrics: "+err.Error())
 			}
 			metricsStore.Clear()

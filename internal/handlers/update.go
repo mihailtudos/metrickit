@@ -77,7 +77,6 @@ func (h *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 
 func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request) {
 	metric := entities.Metrics{}
-
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to read request body")
