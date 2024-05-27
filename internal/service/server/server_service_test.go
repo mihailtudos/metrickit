@@ -1,10 +1,12 @@
 package server
 
 import (
+	"log"
 	"log/slog"
 	"os"
 	"testing"
 
+	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
@@ -14,7 +16,14 @@ import (
 )
 
 func TestCounterService(t *testing.T) {
-	memStore := storage.NewMemStorage()
+	cfg, err := config.NewServerConfig()
+	if err != nil {
+		log.Fatal("failed to get configs: \" + err.Error()")
+	}
+	memStore, err := storage.NewMemStorage(cfg)
+	if err != nil {
+		log.Fatal("failed to initiate storage: " + err.Error())
+	}
 	repos := repositories.NewRepository(memStore)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	cs := NewCounterService(repos.CounterRepository, logger)

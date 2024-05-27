@@ -58,7 +58,8 @@ func run(cfg *config.ServerConfig) {
 	<-quit
 	cfg.Log.DebugContext(context.Background(), "shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(cfg.ShutdownTimeout)*time.Second)
 	defer cancel()
 	err = store.Close()
 	if err != nil {

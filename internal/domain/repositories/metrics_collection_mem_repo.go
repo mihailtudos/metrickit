@@ -22,6 +22,7 @@ func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection,
 }
 
 func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
+	//nolint:exhaustive // entities.PollCount is of type Counter
 	gaugeMetrics := map[entities.MetricName]entities.Gauge{
 		entities.RandomValue:   entities.Gauge(rand.Float64()),
 		entities.Alloc:         entities.Gauge(stats.Alloc),

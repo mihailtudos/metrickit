@@ -5,36 +5,50 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mihailtudos/metrickit/config"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
 var ErrNotFound = errors.New("item not found")
+var ownerFilePerm os.FileMode = 0o600
+
+type MetricsStorage struct {
+	Counter map[entities.MetricName]entities.Counter `json:"counter"`
+	Gauge   map[entities.MetricName]entities.Gauge   `json:"gauge"`
+}
+
+func NewMetricsStorage() *MetricsStorage {
+	return &MetricsStorage{
+		Counter: make(map[entities.MetricName]entities.Counter),
+		Gauge:   make(map[entities.MetricName]entities.Gauge),
+	}
+}
 
 type MemStorage struct {
-	Counter      map[entities.MetricName]entities.Counter
-	Gauge        map[entities.MetricName]entities.Gauge
-	mu           sync.Mutex
-	cfg          *config.ServerConfig
+	MetricsStorage
 	stopSaveChan chan struct{}
+	cfg          *config.ServerConfig
 	file         *os.File
+	mu           sync.Mutex
 }
 
 func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
-	file, err := os.OpenFile(cfg.StorePath, os.O_RDWR|os.O_CREATE, 0666)
+	file, err := os.OpenFile(cfg.StorePath, os.O_RDWR|os.O_CREATE, ownerFilePerm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("store failed to open file: %w", err)
 	}
 	fmt.Println("created")
 
 	ms := &MemStorage{
-		mu:           sync.Mutex{},
-		Counter:      make(map[entities.MetricName]entities.Counter),
-		Gauge:        make(map[entities.MetricName]entities.Gauge),
+		mu: sync.Mutex{},
+		MetricsStorage: MetricsStorage{
+			Counter: make(map[entities.MetricName]entities.Counter),
+			Gauge:   make(map[entities.MetricName]entities.Gauge),
+		},
 		cfg:          cfg,
 		stopSaveChan: make(chan struct{}),
 		file:         file,
@@ -42,7 +56,7 @@ func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
 
 	err = ms.loadFromFile()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("storage mem filed to load the file: %w", err)
 	}
 
 	if cfg.StoreInterval > 0 {
@@ -63,7 +77,10 @@ func (ms *MemStorage) CreateCounterRecord(metric entities.Metrics) error {
 	ms.mu.Unlock()
 
 	if ms.cfg.StoreInterval == 0 {
-		return ms.saveToFile()
+		err := ms.saveToFile()
+		if err != nil {
+			return fmt.Errorf("server service failed to save data to file %w", err)
+		}
 	}
 
 	return nil
@@ -83,7 +100,7 @@ func (ms *MemStorage) CreateGaugeRecord(metric entities.Metrics) error {
 
 func (ms *MemStorage) GetGaugeRecord(key entities.MetricName) (entities.Gauge, error) {
 	ms.mu.Lock()
-	ms.mu.Unlock()
+	defer ms.mu.Unlock()
 
 	if ms.Gauge == nil {
 		return entities.Gauge(0), errors.New("gauge storage not initiated")
@@ -151,7 +168,7 @@ func (ms *MemStorage) loadFromFile() error {
 
 	fileInfo, err := ms.file.Stat()
 	if err != nil {
-		return err
+		return fmt.Errorf("server service failed to get file info %w", err)
 	}
 
 	if fileInfo.Size() == 0 {
@@ -160,15 +177,12 @@ func (ms *MemStorage) loadFromFile() error {
 
 	decoder := json.NewDecoder(ms.file)
 
-	data := struct {
-		Counter map[entities.MetricName]entities.Counter
-		Gauge   map[entities.MetricName]entities.Gauge
-	}{}
+	data := NewMetricsStorage()
 
 	err = decoder.Decode(&data)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("storage mem failed to json parse file content %w", err)
 	}
 
 	ms.Counter = data.Counter
@@ -183,23 +197,26 @@ func (ms *MemStorage) saveToFile() error {
 
 	err := ms.file.Truncate(0)
 	if err != nil {
-		return err
+		return fmt.Errorf("storage mem failed to truncate the file: %w", err)
 	}
 	_, err = ms.file.Seek(0, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("storage mem filed to reset the file: %w", err)
 	}
 
 	encoder := json.NewEncoder(ms.file)
 	data := struct {
-		Counter map[entities.MetricName]entities.Counter
-		Gauge   map[entities.MetricName]entities.Gauge
+		Counter map[entities.MetricName]entities.Counter `json:"Counter"`
+		Gauge   map[entities.MetricName]entities.Gauge   `json:"Gauge"`
 	}{
 		Counter: ms.Counter,
 		Gauge:   ms.Gauge,
 	}
 
-	return encoder.Encode(&data)
+	if err = encoder.Encode(&data); err != nil {
+		return fmt.Errorf("storage mem filed to encode: %w", err)
+	}
+	return nil
 }
 
 func (ms *MemStorage) periodicSave() {
@@ -223,8 +240,12 @@ func (ms *MemStorage) Close() error {
 	close(ms.stopSaveChan)
 	err := ms.saveToFile()
 	if err != nil {
-		return err
+		return fmt.Errorf("storage mem failed to save the file: %w", err)
 	}
 
-	return ms.file.Close()
+	err = ms.file.Close()
+	if err != nil {
+		return fmt.Errorf("storage mem failed to close the file %w", err)
+	}
+	return nil
 }
