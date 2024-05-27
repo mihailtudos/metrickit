@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mihailtudos/metrickit/config"
-	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -44,6 +43,10 @@ func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
 	err = ms.loadFromFile()
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.StoreInterval > 0 {
+		go ms.periodicSave()
 	}
 
 	return ms, nil
@@ -206,8 +209,10 @@ func (ms *MemStorage) periodicSave() {
 	for {
 		select {
 		case <-ticker.C:
-			err := ms.saveToFile()
-			ms.cfg.Log.ErrorContext(context.Background(), "error saving the file", slog.String("err", err.Error()))
+			if err := ms.saveToFile(); err != nil {
+				ms.cfg.Log.ErrorContext(context.Background(), "error saving the file")
+			}
+			ms.cfg.Log.DebugContext(context.Background(), "saved storage state")
 		case <-ms.stopSaveChan:
 			return
 		}
