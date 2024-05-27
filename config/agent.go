@@ -5,6 +5,8 @@ import (
 	"flag"
 	"log/slog"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -77,4 +79,21 @@ func setConfig(interval *int, config *flags.DurationFlag) {
 	if interval != nil {
 		config.Length = *interval
 	}
+}
+
+func splitAddressParts(address *string) (string, int, error) {
+	const numberOfHostPortParts = 2
+	if address == nil {
+		return "", 0, errors.New("invalid address: missing parts")
+	}
+	parts := strings.Split(*address, ":")
+	if len(parts) != numberOfHostPortParts {
+		return "", 0, errors.New("invalid address: missing parts")
+	}
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", 0, errors.New("invalid address: port must be an int value")
+	}
+
+	return parts[0], port, nil
 }
