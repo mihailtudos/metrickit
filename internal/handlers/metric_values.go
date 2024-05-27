@@ -40,7 +40,10 @@ func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 		counters = map[entities.MetricName]entities.Counter{}
 	}
 
-	var memStore = storage.NewMemStorage()
+	var memStore = storage.MemStorage{
+		Counter: make(map[entities.MetricName]entities.Counter),
+		Gauge:   make(map[entities.MetricName]entities.Gauge),
+	}
 
 	memStore.Counter = counters
 	memStore.Gauge = gauges
