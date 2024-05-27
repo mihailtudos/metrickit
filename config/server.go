@@ -25,7 +25,7 @@ type serverEnvs struct {
 
 func parseServerEnvs() (*serverEnvs, error) {
 	envConfig := &serverEnvs{
-		Address:       DefaultAddress,
+		Address:       fmt.Sprintf("%s:%d", DefaultAddress, DefaultPort),
 		LogLevel:      DefaultLogLevel,
 		StoreInterval: 0,
 		StorePath:     DefaultStorePath,
