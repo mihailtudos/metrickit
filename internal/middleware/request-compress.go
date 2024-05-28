@@ -61,6 +61,7 @@ func (crw *compressResponseWriter) WriteHeader(code int) {
 
 func (crw *compressResponseWriter) isCompressible() bool {
 	contentType := crw.Header().Get("Content-Type")
+	// TODO(SSH): you can simply use https://pkg.go.dev/strings#Contains
 	if idx := strings.Index(contentType, ";"); idx >= 0 {
 		contentType = contentType[0:idx]
 	}
@@ -72,6 +73,7 @@ func (crw *compressResponseWriter) isCompressible() bool {
 func WithCompressedResponse(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
+			// TODO(SSH): you should always check errors
 			body, _ := io.ReadAll(r.Body)
 			decompressedBody, err := compressor.Decompress(body)
 			if err != nil {

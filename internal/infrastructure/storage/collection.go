@@ -8,6 +8,7 @@ import (
 )
 
 type MetricsCollection struct {
+	// TODO(SSH): you should make this field unimported: there is no real need to use it directly from another package
 	Collection *entities.MetricsCollection
 	mu         sync.Mutex
 }

@@ -14,6 +14,10 @@ import (
 func main() {
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
+		// TODO(SSH):
+		// 1. as you use slog as the logger in the middleware, it makes sense to use it exclusively in the project
+		// so no other packages (including `log` from stdlib) are used anywhere
+		// 2. log.Fatalf("failed to get agent configurations: %v", err)
 		log.Fatal("failed to get agent configurations: " + err.Error())
 	}
 	metricsStore := storage.NewMetricsCollection()

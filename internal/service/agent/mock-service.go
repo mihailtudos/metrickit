@@ -1,3 +1,6 @@
+// TODO(SSH): we have discussed the use of mocking libraries, so you should use them instead of implementing mocks
+// manually
+
 package agent
 
 import (

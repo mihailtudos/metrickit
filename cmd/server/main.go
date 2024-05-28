@@ -19,6 +19,8 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 )
 
+// TODO(SSH): I would move it closer to the spot where it is actually used
+//
 //go:embed templates
 var templatesFs embed.FS
 
@@ -35,10 +37,12 @@ func run(cfg *config.ServerConfig) {
 	store, err := storage.NewMemStorage(cfg)
 	if err != nil {
 		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
+		// TODO(SSH): fatal should only be called from the entry-point function
 		log.Fatalf("failed to initialize the mem store: %s", err.Error())
 	}
 	repos := repositories.NewRepository(store)
 	h := handlers.NewHandler(server.NewService(repos, cfg.Log), cfg.Log, templatesFs)
+	// TODO(SSH): you should use your logger instead
 	fmt.Println(cfg.ReStore, cfg.StorePath)
 	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Address)
 	srv := &http.Server{

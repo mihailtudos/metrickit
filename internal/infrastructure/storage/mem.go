@@ -32,8 +32,14 @@ type MemStorage struct {
 	MetricsStorage
 	stopSaveChan chan struct{}
 	cfg          *config.ServerConfig
-	file         *os.File
-	mu           sync.Mutex
+	// TODO(SSH): seems, that adding writing metrics to file should not really change the in-memory store implementation
+	// it would be better to:
+	// 1. Define a `FileStorage` type, which is different from `MemStorage`, but wraps its functionality (you can embed the `MemStorage` into it)
+	// 2. The storage "constructor" should now return either `MemStorage` or `FileStorage`, depending on the passed configuration
+	// 3. `MemStorage` and `FileStorage`  should implement the same interface. The controller should behave the same way
+	//		no matter the actual implementation of the storage
+	file *os.File
+	mu   sync.Mutex
 }
 
 func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {

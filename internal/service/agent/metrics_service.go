@@ -28,6 +28,8 @@ func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
 }
 
 func (m *MetricsCollectionService) Collect() error {
+	// TODO(SSH): you do not need a context here. We will discuss contexts during the 4th sprint, before that
+	// you probably should not use it at all
 	m.logger.DebugContext(context.Background(), "collecting metrics...")
 
 	currMetric := runtime.MemStats{}
@@ -40,6 +42,8 @@ func (m *MetricsCollectionService) Collect() error {
 	return nil
 }
 
+// TODO(SSH): you should reove the functionality that allows you to send metrics as plain text from the agent code
+// the current version should send metrics only in JSON
 func (m *MetricsCollectionService) Send(serverAddr string) error {
 	metrics, err := m.mRepo.GetAll()
 	if err != nil {
@@ -125,6 +129,7 @@ func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
 func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
 	mJSONStruct, err := json.Marshal(metric)
 	if err != nil {
+		// TODO(SSH): you should also wrap `err` here
 		return entities.ErrJSONMarshal
 	}
 
@@ -156,6 +161,7 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 		return errors.New("failed to publish the metric " + res.Status)
 	}
 
+	// TODO(SSH): in fact, we do not care about the response body: we are good as soon as the server responds with 200
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		m.logger.ErrorContext(context.Background(), "failed to read response body"+err.Error())

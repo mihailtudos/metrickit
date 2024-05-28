@@ -1,3 +1,5 @@
+// TODO(SSH): our convention is to have only `cmd` and `internal` code directories in the project root folder
+// so you should move it to `internal`
 package config
 
 import (
@@ -55,6 +57,7 @@ func parseFlags(agentCfg *AgentConfig) error {
 	_ = flag.Value(serverAddr)
 
 	flag.Var(serverAddr, "a", "server address - usage: ADDRESS:PORT")
+	// TODO(SSH): "e.g." part seems excessive
 	flag.Var(poolIntervalInSeconds, "p", "sets the frequency of polling the metrics in seconds e.g. -p=2")
 	flag.Var(reportIntervalInSeconds, "r", "sets the frequency of sending metrics to the server in seconds e.g. -r=4")
 

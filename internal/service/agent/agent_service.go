@@ -6,6 +6,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 )
 
+// TODO(SSH): where do you use this interface ? Why do you need it ?
 type MetricsService interface {
 	Collect() error
 	Send(serverAddr string) error
