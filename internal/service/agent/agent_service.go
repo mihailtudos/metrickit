@@ -9,7 +9,6 @@ import (
 // TODO(SSH): where do you use this interface ? Why do you need it ?
 type MetricsService interface {
 	Collect() error
-	Send(serverAddr string) error
 	SendJSONMetric(serverAddr string) error
 }
 

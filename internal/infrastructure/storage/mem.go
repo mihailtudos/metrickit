@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mihailtudos/metrickit/internal/config"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 

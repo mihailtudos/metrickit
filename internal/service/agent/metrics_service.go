@@ -6,15 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
-	"net/http"
-	"runtime"
-	"strconv"
-
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/pkg/compressor"
+	"log/slog"
+	"net/http"
+	"runtime"
 )
 
 type MetricsCollectionService struct {
@@ -28,50 +25,13 @@ func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
 }
 
 func (m *MetricsCollectionService) Collect() error {
-	// TODO(SSH): you do not need a context here. We will discuss contexts during the 4th sprint, before that
-	// you probably should not use it at all
-	m.logger.DebugContext(context.Background(), "collecting metrics...")
+	m.logger.Debug("collecting metrics...")
 
 	currMetric := runtime.MemStats{}
 	runtime.ReadMemStats(&currMetric)
 
 	if err := m.mRepo.Store(&currMetric); err != nil {
 		return errors.New("failed to store the metrics " + err.Error())
-	}
-
-	return nil
-}
-
-// TODO(SSH): you should reove the functionality that allows you to send metrics as plain text from the agent code
-// the current version should send metrics only in JSON
-func (m *MetricsCollectionService) Send(serverAddr string) error {
-	metrics, err := m.mRepo.GetAll()
-	if err != nil {
-		m.logger.ErrorContext(context.Background(), fmt.Sprintf("failed to send the metrics: %v", err))
-		return errors.New("failed to send the metrics: " + err.Error())
-	}
-
-	m.logger.DebugContext(context.Background(), "publishing counter metrics")
-	for k, v := range metrics.CounterMetrics {
-		val := strconv.Itoa(int(v))
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.CounterMetricName, k, val)
-		err = m.publishMetric(url, "text/plain", nil)
-		if err != nil {
-			m.logger.DebugContext(context.Background(),
-				"something went wrong when publishing the counter metrics: "+err.Error())
-		}
-	}
-
-	// publish gauge type metrics
-	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
-	for k, v := range metrics.GaugeMetrics {
-		val := strconv.FormatFloat(float64(v), 'f', -1, 64)
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.GaugeMetricName, k, val)
-		err = m.publishMetric(url, "text/plain", nil)
-		if err != nil {
-			m.logger.ErrorContext(context.Background(),
-				"something went wrong when publishing the gauge metrics: "+err.Error())
-		}
 	}
 
 	return nil
@@ -129,8 +89,7 @@ func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
 func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
 	mJSONStruct, err := json.Marshal(metric)
 	if err != nil {
-		// TODO(SSH): you should also wrap `err` here
-		return entities.ErrJSONMarshal
+		return fmt.Errorf("failed to public metric: %w", entities.ErrJSONMarshal)
 	}
 
 	gzipBuffer, err := compressor.Compress(mJSONStruct)
@@ -161,13 +120,6 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 		return errors.New("failed to publish the metric " + res.Status)
 	}
 
-	// TODO(SSH): in fact, we do not care about the response body: we are good as soon as the server responds with 200
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		m.logger.ErrorContext(context.Background(), "failed to read response body"+err.Error())
-		return errors.New("failed to read response body " + err.Error())
-	}
-
-	m.logger.DebugContext(context.Background(), "published successfully: ", slog.String("response", string(body)))
+	m.logger.Debug("published successfully", slog.String("metric", string(mJSONStruct)))
 	return nil
 }

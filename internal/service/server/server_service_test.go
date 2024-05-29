@@ -1,12 +1,12 @@
 package server
 
 import (
+	"github.com/mihailtudos/metrickit/internal/config"
 	"log"
 	"log/slog"
 	"os"
 	"testing"
 
-	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"

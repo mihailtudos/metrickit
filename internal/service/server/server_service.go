@@ -10,7 +10,8 @@ import (
 
 var ErrInvalidValue = errors.New("invalid value given")
 
-// TODO(SSH): it's not a very good idea to declare your structure like that: it complexifies things and does not bring much to the table
+// TODO(SSH): it's not a very good idea to declare your structure like that: it complexifies things
+// and does not bring much to the table
 // you should declare stuctures as they are and declare the "corresponding" interfaces where they are used
 type CounterService interface {
 	Create(metric entities.Metrics) error

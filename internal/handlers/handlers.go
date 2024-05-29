@@ -36,5 +36,5 @@ func (h *ServerHandler) InitHandlers() http.Handler {
 	mux.Post("/update/", h.handleJSONUploads)
 	mux.Post("/value/", h.getJSONMetricValue)
 
-	return middleware.WithCompressedResponse(middleware.RequestLogger(mux, h.logger))
+	return middleware.WithCompressedResponse(middleware.RequestLogger(mux, h.logger), h.logger)
 }

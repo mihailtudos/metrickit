@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
+	"github.com/mihailtudos/metrickit/internal/config"
+	"os"
 	"time"
 
-	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/agent"
@@ -14,12 +14,8 @@ import (
 func main() {
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
-		// TODO(SSH):
-		// 1. as you use slog as the logger in the middleware,
-		//it makes sense to use it exclusively in the project
-		// so no other packages (including `log` from stdlib) are used anywhere
-		// 2. log.Fatalf("failed to get agent configurations: %v", err)
-		log.Fatal("failed to get agent configurations: " + err.Error())
+		agentCfg.Log.ErrorContext(context.Background(), "failed to get agent configurations: "+err.Error())
+		os.Exit(-1)
 	}
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)

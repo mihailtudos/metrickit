@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"github.com/mihailtudos/metrickit/internal/config"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mihailtudos/metrickit/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/handlers"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
@@ -30,20 +30,22 @@ func main() {
 		log.Fatal("failed to provide server config: " + err.Error())
 	}
 
-	run(appConfig)
+	if err = run(appConfig); err != nil {
+		log.Fatalf("failed to initialize the mem store: %s", err.Error())
+	}
 }
 
-func run(cfg *config.ServerConfig) {
+func run(cfg *config.ServerConfig) error {
 	store, err := storage.NewMemStorage(cfg)
 	if err != nil {
-		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
-		// TODO(SSH): fatal should only be called from the entry-point function
-		log.Fatalf("failed to initialize the mem store: %s", err.Error())
+		if cfg.Log != nil {
+			cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
+		}
+		return fmt.Errorf("failed to setup the memstore: %w", err)
 	}
 	repos := repositories.NewRepository(store)
 	h := handlers.NewHandler(server.NewService(repos, cfg.Log), cfg.Log, templatesFs)
-	// TODO(SSH): you should use your logger instead
-	fmt.Println(cfg.ReStore, cfg.StorePath)
+
 	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Address)
 	srv := &http.Server{
 		Addr:    cfg.Address,
@@ -54,7 +56,7 @@ func run(cfg *config.ServerConfig) {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("could not listen on %s: %v\n", cfg.Address, err)
 		}
 	}()
@@ -75,4 +77,5 @@ func run(cfg *config.ServerConfig) {
 	}
 
 	cfg.Log.DebugContext(context.Background(), "server exiting")
+	return nil
 }
