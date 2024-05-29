@@ -1,8 +1,6 @@
-// TODO(SSH): you should make sure you update this file periodically, see this thread to discover a way to do it: https://app.pachca.com/chats/9180496?message=243787071
 module github.com/mihailtudos/metrickit
 
-// TODO(SSH): bump the version to 1.22
-go 1.21.9
+go 1.22
 
 require (
 	github.com/caarlos0/env/v11 v11.0.0
