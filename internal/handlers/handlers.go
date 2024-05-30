@@ -11,14 +11,17 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+//go:embed templates
+var templatesFs embed.FS
+
 type ServerHandler struct {
 	services    *server.Service
 	logger      *slog.Logger
 	TemplatesFs embed.FS
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger, fs embed.FS) *ServerHandler {
-	return &ServerHandler{services: services, logger: logger, TemplatesFs: fs}
+func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
+	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs}
 }
 
 func (h *ServerHandler) InitHandlers() http.Handler {

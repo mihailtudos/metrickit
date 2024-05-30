@@ -37,7 +37,7 @@ func (m *MetricsCollectionService) Collect() error {
 	return nil
 }
 
-func (m *MetricsCollectionService) SendJSONMetric(serverAddr string) error {
+func (m *MetricsCollectionService) Send(serverAddr string) error {
 	metrics, err := m.mRepo.GetAll()
 	if err != nil {
 		m.logger.ErrorContext(context.Background(), fmt.Sprintf("failed to send the metrics: %v", err))

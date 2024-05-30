@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"errors"
 	"fmt"
 	"github.com/mihailtudos/metrickit/internal/config"
@@ -18,11 +17,6 @@ import (
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/server"
 )
-
-// TODO(SSH): I would move it closer to the spot where it is actually used
-//
-//go:embed templates
-var templatesFs embed.FS
 
 func main() {
 	appConfig, err := config.NewServerConfig()
@@ -44,7 +38,7 @@ func run(cfg *config.ServerConfig) error {
 		return fmt.Errorf("failed to setup the memstore: %w", err)
 	}
 	repos := repositories.NewRepository(store)
-	h := handlers.NewHandler(server.NewService(repos, cfg.Log), cfg.Log, templatesFs)
+	h := handlers.NewHandler(server.NewService(repos, cfg.Log), cfg.Log)
 
 	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Address)
 	srv := &http.Server{
