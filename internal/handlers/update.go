@@ -41,7 +41,7 @@ func (h *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 		}
 
 		metric := entities.Metrics{ID: metricName, MType: metricType, Delta: &delta}
-		if err = h.services.CounterService.Create(metric); err != nil {
+		if err = h.services.MetricsService.Create(metric); err != nil {
 			h.logger.ErrorContext(r.Context(),
 				"failed to create the metric",
 				slog.String("err", err.Error()), slog.String("url", r.RequestURI))
@@ -58,7 +58,7 @@ func (h *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		metric := entities.Metrics{ID: metricName, MType: metricType, Value: &value}
-		if err = h.services.GaugeService.Create(metric); err != nil {
+		if err = h.services.MetricsService.Create(metric); err != nil {
 			h.logger.ErrorContext(r.Context(),
 				"failed to create the metric",
 				slog.String("err", err.Error()),
@@ -124,12 +124,12 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 
 	switch entities.MetricType(metric.MType) {
 	case entities.CounterMetricName:
-		if err := h.services.CounterService.Create(metric); err != nil {
+		if err := h.services.MetricsService.Create(metric); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	case entities.GaugeMetricName:
-		if err := h.services.GaugeService.Create(metric); err != nil {
+		if err := h.services.MetricsService.Create(metric); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -183,12 +183,11 @@ func (h *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.Me
 	if entities.MetricType(metric.MType) == entities.GaugeMetricName {
 		return &metric, nil
 	} else {
-		currentDelta, err := h.services.CounterService.Get(entities.MetricName(metric.ID))
+		currentDelta, err := h.services.MetricsService.Get(entities.MetricName(metric.ID), entities.CounterMetricName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get the counter value %w", err)
 		}
 
-		intVal := int64(currentDelta)
-		return &entities.Metrics{ID: metric.ID, MType: metric.MType, Delta: &intVal}, nil
+		return &currentDelta, nil
 	}
 }

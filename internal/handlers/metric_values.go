@@ -24,33 +24,23 @@ func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFS(h.TemplatesFs, "templates/index.html")
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to parse the template: "+err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	gauges, err := h.services.GaugeService.GetAll()
+	metrics, err := h.services.MetricsService.GetAll()
 	if err != nil {
-		h.logger.ErrorContext(r.Context(), "failed to get the gauge metrics: "+err.Error())
-		gauges = map[entities.MetricName]entities.Gauge{}
+		h.logger.ErrorContext(r.Context(), "failed to get the metrics: "+err.Error())
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
-
-	counters, err := h.services.CounterService.GetAll()
-	if err != nil {
-		h.logger.ErrorContext(r.Context(), "failed to get the counter metrics: "+err.Error())
-		counters = map[entities.MetricName]entities.Counter{}
-	}
-
-	var memStore = storage.NewMetricsStorage()
-
-	memStore.Counter = counters
-	memStore.Gauge = gauges
 
 	w.Header().Set(ContentType, "text/html; charset=utf-8")
-	err = tmpl.ExecuteTemplate(w, "index.html", memStore)
+	err = tmpl.ExecuteTemplate(w, "index.html", metrics)
 
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to execute template: "+err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 }
@@ -144,7 +134,7 @@ func (h *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reques
 
 func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, error) {
 	if entities.MetricType(metric.MType) == entities.CounterMetricName {
-		counterValue, err := h.services.CounterService.Get(entities.MetricName(metric.ID))
+		record, err := h.services.MetricsService.Get(entities.MetricName(metric.ID), entities.MetricType(metric.MType))
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.MType, err)
@@ -153,12 +143,11 @@ func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, e
 			return nil, errors.New("failed to get the given metric: " + err.Error())
 		}
 
-		int64Val := int64(counterValue)
-		return &entities.Metrics{ID: metric.ID, MType: metric.MType, Delta: &int64Val}, nil
+		return &record, nil
 	}
 
 	if entities.MetricType(metric.MType) == entities.GaugeMetricName {
-		gaugeValue, err := h.services.GaugeService.Get(entities.MetricName(metric.ID))
+		record, err := h.services.MetricsService.Get(entities.MetricName(metric.ID), entities.MetricType(metric.MType))
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				return nil, fmt.Errorf("metric with type=%s, name=%s not found: %w", metric.MType, metric.MType, err)
@@ -167,8 +156,7 @@ func (h *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, e
 			return nil, errors.New("failed to get the given metric: " + err.Error())
 		}
 
-		float64Val := float64(gaugeValue)
-		return &entities.Metrics{ID: metric.ID, MType: metric.MType, Value: &float64Val}, nil
+		return &record, nil
 	}
 
 	return nil, ErrUnknownMetric

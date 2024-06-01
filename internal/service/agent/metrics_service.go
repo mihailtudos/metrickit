@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/internal/domain/repositories"
-	"github.com/mihailtudos/metrickit/pkg/compressor"
 	"log/slog"
 	"net/http"
 	"runtime"
+
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/internal/domain/repositories"
+	"github.com/mihailtudos/metrickit/pkg/compressor"
 )
 
 type MetricsCollectionService struct {
@@ -25,7 +26,7 @@ func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
 }
 
 func (m *MetricsCollectionService) Collect() error {
-	m.logger.Debug("collecting metrics...")
+	m.logger.DebugContext(context.Background(), "collecting metrics...")
 
 	currMetric := runtime.MemStats{}
 	runtime.ReadMemStats(&currMetric)
@@ -120,6 +121,6 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 		return errors.New("failed to publish the metric " + res.Status)
 	}
 
-	m.logger.Debug("published successfully", slog.String("metric", string(mJSONStruct)))
+	m.logger.DebugContext(context.Background(), "published successfully", slog.String("metric", string(mJSONStruct)))
 	return nil
 }

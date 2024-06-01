@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mihailtudos/metrickit/internal/config"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/handlers"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
@@ -25,20 +25,19 @@ func main() {
 	}
 
 	if err = run(appConfig); err != nil {
-		log.Fatalf("failed to initialize the mem store: %s", err.Error())
+		appConfig.Log.ErrorContext(context.Background(), "failed to initialize the mem store: "+err.Error())
+		os.Exit(1)
 	}
 }
 
 func run(cfg *config.ServerConfig) error {
-	store, err := storage.NewMemStorage(cfg)
+	store, err := storage.NewStorage(cfg)
 	if err != nil {
-		if cfg.Log != nil {
-			cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
-		}
+		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
 		return fmt.Errorf("failed to setup the memstore: %w", err)
 	}
 	repos := repositories.NewRepository(store)
-	h := handlers.NewHandler(server.NewService(repos, cfg.Log), cfg.Log)
+	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log)
 
 	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Address)
 	srv := &http.Server{

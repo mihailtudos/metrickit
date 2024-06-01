@@ -37,7 +37,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 
 	flag.StringVar(&envConfig.Address, "a", envConfig.Address, "address and port to run the server")
 	flag.StringVar(&envConfig.LogLevel, "l", envConfig.LogLevel, "log level")
-	flag.IntVar(&envConfig.StoreInterval, "i", envConfig.StoreInterval, "metrics store interval")
+	flag.IntVar(&envConfig.StoreInterval, "i", envConfig.StoreInterval, "metrics store interval in seconds")
 	flag.StringVar(&envConfig.StorePath, "f", envConfig.StorePath, "metrics store file path")
 	flag.BoolVar(&envConfig.ReStore, "r", envConfig.ReStore, "metrics re-store option")
 

@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"math/rand"
@@ -69,7 +70,8 @@ func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
 		return errors.New("failed to get counter metric" + err.Error())
 	}
 
-	m.logger.Debug(
+	m.logger.DebugContext(
+		context.Background(),
 		"updated metrics",
 		slog.Int64("PoolCount", *pc.Delta))
 	return nil

@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/mihailtudos/metrickit/internal/config"
 	"os"
 	"time"
 
+	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/agent"
@@ -29,11 +29,11 @@ func main() {
 	for {
 		select {
 		case <-poolTicker.C:
-			if err := metricsService.Collect(); err != nil {
+			if err := metricsService.MetricsService.Collect(); err != nil {
 				agentCfg.Log.ErrorContext(context.Background(), "failed to collect the metrics: "+err.Error())
 			}
 		case <-reportTicker.C:
-			if err := metricsService.SendJSONMetric(agentCfg.ServerAddr); err != nil {
+			if err := metricsService.MetricsService.Send(agentCfg.ServerAddr); err != nil {
 				agentCfg.Log.ErrorContext(context.Background(), "failed to publish the metrics: "+err.Error())
 			}
 			metricsStore.Clear()
