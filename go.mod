@@ -1,6 +1,7 @@
 module github.com/mihailtudos/metrickit
 
-go 1.22
+// TODO(SSH): bump the version to 1.22
+go 1.21.9
 
 require (
 	github.com/caarlos0/env/v11 v11.0.0
