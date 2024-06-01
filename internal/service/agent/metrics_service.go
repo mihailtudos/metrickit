@@ -47,47 +47,41 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 
 	m.logger.DebugContext(context.Background(), "publishing counter metrics")
 	for k, v := range metrics.CounterMetrics {
-		url := fmt.Sprintf("http://%s/update/", serverAddr)
 		val := int64(v)
 		metric := entities.Metrics{
 			ID:    string(k),
 			MType: string(entities.CounterMetricName),
 			Delta: &val,
 		}
-		err := m.publishMetric(url, "application/json", &metric)
+		err := m.publishMetric(serverAddr, "application/json", &metric)
 		if err != nil {
-			if errors.Is(err, entities.ErrJSONMarshal) {
-				m.logger.DebugContext(context.Background(), "failed to marshal struct to JSON : "+err.Error())
-			}
 			m.logger.DebugContext(context.Background(),
-				"something went wrong when publishing the counter metrics: "+err.Error())
+				"publishing the counter metrics failed: "+err.Error())
 		}
 	}
 
 	// publish gauge type metrics
 	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
 	for k, v := range metrics.GaugeMetrics {
-		url := fmt.Sprintf("http://%s/update/", serverAddr)
 		val := float64(v)
 		metric := entities.Metrics{
 			ID:    string(k),
 			MType: string(entities.GaugeMetricName),
 			Value: &val,
 		}
-		err := m.publishMetric(url, "application/json", &metric)
+		err := m.publishMetric(serverAddr, "application/json", &metric)
 		if err != nil {
-			if errors.Is(err, entities.ErrJSONMarshal) {
-				m.logger.DebugContext(context.Background(), "failed to marshal struct to JSON : "+err.Error())
-			}
 			m.logger.ErrorContext(context.Background(),
-				"something went wrong when publishing the gauge metrics: "+err.Error())
+				"publishing the gauge metrics failed: "+err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
+func (m *MetricsCollectionService) publishMetric(serverAddr, contentType string, metric *entities.Metrics) error {
+	url := fmt.Sprintf("http://%s/update/", serverAddr)
+
 	mJSONStruct, err := json.Marshal(metric)
 	if err != nil {
 		return fmt.Errorf("failed to public metric: %w", entities.ErrJSONMarshal)

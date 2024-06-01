@@ -47,7 +47,7 @@ func NewStorage(cfg *config.ServerConfig) (Storage, error) {
 }
 
 func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
-	fmt.Println("created mem storage")
+	cfg.Log.DebugContext(context.Background(), "created mem storage")
 
 	ms := &MemStorage{
 		mu: sync.Mutex{},

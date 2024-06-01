@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,12 +26,19 @@ func main() {
 	}
 
 	if err = run(appConfig); err != nil {
-		appConfig.Log.ErrorContext(context.Background(), "failed to initialize the mem store: "+err.Error())
+		appConfig.Log.ErrorContext(context.Background(), "failed to run the server: "+err.Error())
 		os.Exit(1)
 	}
 }
 
 func run(cfg *config.ServerConfig) error {
+	cfg.Log.DebugContext(context.Background(), "provided config",
+		slog.String("ServerAddress", cfg.Address),
+		slog.String("StorePath", cfg.StorePath),
+		slog.String("LogLevel", cfg.LogLevel),
+		slog.Int("StoreInterval", cfg.StoreInterval),
+		slog.Bool("ReStore", cfg.ReStore))
+
 	store, err := storage.NewStorage(cfg)
 	if err != nil {
 		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")

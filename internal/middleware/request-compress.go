@@ -88,7 +88,6 @@ func WithCompressedResponse(next http.Handler, logger *slog.Logger) http.Handler
 
 			r.Body = io.NopCloser(bytes.NewReader(decompressedBody))
 			r.Header.Del("Content-Encoding")
-			fmt.Println("success")
 		}
 
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {

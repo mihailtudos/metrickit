@@ -25,7 +25,7 @@ func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("store failed to open file: %w", err)
 	}
-	fmt.Println("created file storage")
+	cfg.Log.DebugContext(context.Background(), "created file storage")
 
 	fs := &FileStorage{
 		MemStorage: MemStorage{
