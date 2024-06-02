@@ -32,7 +32,7 @@ func (m *MetricsCollectionService) Collect() error {
 	runtime.ReadMemStats(&currMetric)
 
 	if err := m.mRepo.Store(&currMetric); err != nil {
-		return errors.New("failed to store the metrics " + err.Error())
+		return fmt.Errorf("failed to store the metrics: %w", err)
 	}
 
 	return nil
