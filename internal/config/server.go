@@ -11,12 +11,12 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-const DefaultPort = 8080
-const DefaultAddress = "localhost"
-const DefaultStorePath = "/tmp/metrics-db.json"
-const DefaultLogLevel = "debug"
-const DefaultStoreInterval = 300
-const DefaultShutdownTimeout = 30
+const defaultPort = 8080
+const defaultAddress = "localhost"
+const defaultStorePath = "/tmp/metrics-db.json"
+const defaultLogLevel = "debug"
+const defaultStoreInterval = 300
+const defaultShutdownTimeout = 30
 
 type serverEnvs struct {
 	Address       string `env:"ADDRESS"`
@@ -28,10 +28,10 @@ type serverEnvs struct {
 
 func parseServerEnvs() (*serverEnvs, error) {
 	envConfig := &serverEnvs{
-		Address:       fmt.Sprintf("%s:%d", DefaultAddress, DefaultPort),
-		LogLevel:      DefaultLogLevel,
-		StoreInterval: DefaultStoreInterval,
-		StorePath:     DefaultStorePath,
+		Address:       fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
+		LogLevel:      defaultLogLevel,
+		StoreInterval: defaultStoreInterval,
+		StorePath:     defaultStorePath,
 		ReStore:       true,
 	}
 
@@ -67,7 +67,7 @@ func NewServerConfig() (*ServerConfig, error) {
 	return &ServerConfig{
 		Log:             logger,
 		serverEnvs:      envs,
-		ShutdownTimeout: DefaultShutdownTimeout,
+		ShutdownTimeout: defaultShutdownTimeout,
 	}, nil
 }
 
@@ -82,6 +82,7 @@ func getLevel(level string) slog.Level {
 	case "error":
 		return slog.LevelError
 	default:
-		return getLevel(DefaultLogLevel)
+
+		return getLevel(defaultLogLevel)
 	}
 }

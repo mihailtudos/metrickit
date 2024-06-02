@@ -1,4 +1,4 @@
-package middleware
+package handlers
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ func (l *logWriter) WriteHeader(status int) {
 	l.ResponseWriter.WriteHeader(status)
 }
 
-func RequestLogger(h http.Handler, logger *slog.Logger) http.Handler {
+func (sh *ServerHandler) RequestLogger(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		uri := r.RequestURI
 		method := r.Method
@@ -47,7 +47,7 @@ func RequestLogger(h http.Handler, logger *slog.Logger) http.Handler {
 		h.ServeHTTP(lw, r)
 		duration := time.Since(start)
 
-		logger.InfoContext(r.Context(),
+		sh.logger.InfoContext(r.Context(),
 			"incoming "+proto,
 			slog.String("uri", uri),
 			slog.String("method", method),

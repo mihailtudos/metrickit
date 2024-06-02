@@ -1,11 +1,10 @@
-package middleware
+package handlers
 
 import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -70,12 +69,12 @@ func (crw *compressResponseWriter) isCompressible() bool {
 	return ok
 }
 
-func WithCompressedResponse(next http.Handler, logger *slog.Logger) http.Handler {
+func (sh *ServerHandler) WithCompressedResponse(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				logger.ErrorContext(r.Context(), "failed to read req body: %w", err)
+				sh.logger.ErrorContext(r.Context(), "failed to read req body: %w", err)
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}

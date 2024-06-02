@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"os"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 func main() {
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
-		agentCfg.Log.ErrorContext(context.Background(), "failed to get agent configurations: "+err.Error())
+		agentCfg.Log.ErrorContext(context.Background(), "failed to get agent configurations: ", helpers.ErrAttr(err))
 		os.Exit(-1)
 	}
 	metricsStore := storage.NewMetricsCollection()
@@ -30,7 +31,7 @@ func main() {
 		select {
 		case <-poolTicker.C:
 			if err := metricsService.MetricsService.Collect(); err != nil {
-				agentCfg.Log.ErrorContext(context.Background(), "failed to collect the metrics: "+err.Error())
+				agentCfg.Log.ErrorContext(context.Background(), "failed to collect the metrics: ", helpers.ErrAttr(err))
 			}
 		case <-reportTicker.C:
 			if err := metricsService.MetricsService.Send(agentCfg.ServerAddr); err != nil {

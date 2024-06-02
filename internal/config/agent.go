@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -47,11 +48,9 @@ func parseFlags(agentCfg *AgentConfig) error {
 		return errors.New("failed to parse env vars: " + err.Error())
 	}
 
-	serverAddr := flags.NewServerAddressFlag(DefaultAddress, DefaultPort)
+	serverAddr := flags.NewServerAddressFlag(defaultAddress, defaultPort)
 	poolIntervalInSeconds := flags.NewDurationFlag(time.Second, DefaultPoolInterval)
 	reportIntervalInSeconds := flags.NewDurationFlag(time.Second, DefaultReportInterval)
-
-	_ = flag.Value(serverAddr)
 
 	flag.Var(serverAddr, "a", "server address - usage: ADDRESS:PORT")
 	flag.Var(poolIntervalInSeconds, "p", "sets the frequency of polling the metrics in seconds")
@@ -60,10 +59,11 @@ func parseFlags(agentCfg *AgentConfig) error {
 	flag.Parse()
 
 	host, port, err := splitAddressParts(cfg.ServerAddr)
-	if err == nil {
-		serverAddr = flags.NewServerAddressFlag(host, port)
+	if err != nil {
+		return fmt.Errorf("agent config failed: %w", err)
 	}
 
+	serverAddr = flags.NewServerAddressFlag(host, port)
 	setConfig(cfg.ReportInterval, reportIntervalInSeconds)
 	setConfig(cfg.PollInterval, poolIntervalInSeconds)
 

@@ -17,7 +17,8 @@ import (
 )
 
 var ErrUnknownMetric = errors.New("unknown metric type")
-var ContentType = "Content-Type"
+
+const contentType = "Content-Type"
 
 func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(h.TemplatesFs)
@@ -35,7 +36,7 @@ func (h *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(ContentType, "text/html; charset=utf-8")
+	w.Header().Set(contentType, "text/html; charset=utf-8")
 	err = tmpl.ExecuteTemplate(w, "index.html", metrics)
 
 	if err != nil {
@@ -68,7 +69,7 @@ func (h *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(ContentType, "text/plain; charset=utf-8")
+	w.Header().Set(contentType, "text/plain; charset=utf-8")
 	switch entities.MetricType(currentMetric.MType) {
 	case entities.CounterMetricName:
 		w.WriteHeader(http.StatusOK)
@@ -117,7 +118,7 @@ func (h *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set(ContentType, "application/json; charset=utf-8")
+	w.Header().Set(contentType, "application/json; charset=utf-8")
 	jsonMetric, err := json.MarshalIndent(currentMetric, "", "  ")
 	if err != nil {
 		h.logger.ErrorContext(r.Context(), "failed to marshal metric: "+err.Error())

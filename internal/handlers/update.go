@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"io"
 	"log/slog"
 	"net/http"
@@ -79,7 +80,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	metric := entities.Metrics{}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.logger.ErrorContext(r.Context(), "failed to read request body")
+		h.logger.DebugContext(r.Context(), "failed to read request body")
 		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
 		return
 	}
@@ -92,7 +93,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
-		h.logger.ErrorContext(r.Context(),
+		h.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
 			slog.String("body", string(body)))
 		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
@@ -103,7 +104,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	// return http.StatusNotFound if metric type is not provided
 	if metric.MType != string(entities.GaugeMetricName) &&
 		metric.MType != string(entities.CounterMetricName) {
-		h.logger.ErrorContext(r.Context(),
+		h.logger.DebugContext(r.Context(),
 			"invalid metric received",
 			slog.String("metric", string(body)),
 		)
@@ -112,7 +113,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	}
 
 	if !isMetricNameAndValuePresent(metric) {
-		h.logger.ErrorContext(r.Context(),
+		h.logger.DebugContext(r.Context(),
 			"invalid metric received",
 			slog.String("metric", string(body)),
 		)
@@ -125,11 +126,19 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	switch entities.MetricType(metric.MType) {
 	case entities.CounterMetricName:
 		if err := h.services.MetricsService.Create(metric); err != nil {
+			h.logger.ErrorContext(r.Context(),
+				"failed to crete the counter metric",
+				helpers.ErrAttr(err),
+			)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	case entities.GaugeMetricName:
 		if err := h.services.MetricsService.Create(metric); err != nil {
+			h.logger.ErrorContext(r.Context(),
+				"failed to create the gauge metric",
+				helpers.ErrAttr(err),
+			)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -140,7 +149,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 
 	updatedMetric, err := h.getResponseMetric(metric)
 	if err != nil {
-		h.logger.ErrorContext(r.Context(), "failed generate response")
+		h.logger.ErrorContext(r.Context(), "failed generate response", helpers.ErrAttr(err))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -149,6 +158,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		h.logger.ErrorContext(r.Context(),
 			"failed to marshal the response",
+			helpers.ErrAttr(err),
 			slog.String("body", string(body)))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -158,6 +168,7 @@ func (h *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request
 	if _, err = w.Write(response); err != nil {
 		h.logger.ErrorContext(r.Context(),
 			"failed to write the response",
+			helpers.ErrAttr(err),
 			slog.String("response", string(response)))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}

@@ -41,8 +41,7 @@ func (m *MetricsCollectionService) Collect() error {
 func (m *MetricsCollectionService) Send(serverAddr string) error {
 	metrics, err := m.mRepo.GetAll()
 	if err != nil {
-		m.logger.ErrorContext(context.Background(), fmt.Sprintf("failed to send the metrics: %v", err))
-		return errors.New("failed to send the metrics: " + err.Error())
+		return fmt.Errorf("failed to send the metrics: %w", err)
 	}
 
 	m.logger.DebugContext(context.Background(), "publishing counter metrics")
@@ -79,12 +78,14 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	return nil
 }
 
+var ErrJSONMarshal = errors.New("failed to marshal to JSON")
+
 func (m *MetricsCollectionService) publishMetric(serverAddr, contentType string, metric *entities.Metrics) error {
 	url := fmt.Sprintf("http://%s/update/", serverAddr)
 
 	mJSONStruct, err := json.Marshal(metric)
 	if err != nil {
-		return fmt.Errorf("failed to public metric: %w", entities.ErrJSONMarshal)
+		return fmt.Errorf("failed to public metric: %w", ErrJSONMarshal)
 	}
 
 	gzipBuffer, err := compressor.Compress(mJSONStruct)

@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/mihailtudos/metrickit/internal/middleware"
 	"github.com/mihailtudos/metrickit/internal/service/server"
 
 	"github.com/go-chi/chi/v5"
@@ -39,5 +38,6 @@ func (h *ServerHandler) InitHandlers() http.Handler {
 	mux.Post("/update/", h.handleJSONUploads)
 	mux.Post("/value/", h.getJSONMetricValue)
 
-	return middleware.WithCompressedResponse(middleware.RequestLogger(mux, h.logger), h.logger)
+	mux.Use(h.RequestLogger, h.WithCompressedResponse)
+	return mux
 }
