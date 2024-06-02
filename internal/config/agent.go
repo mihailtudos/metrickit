@@ -1,98 +1,66 @@
 package config
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/mihailtudos/metrickit/pkg/flags"
 )
 
-const DefaultReportInterval = 10
-const DefaultPoolInterval = 2
+const defaultReportInterval = 10
+const defaultPoolInterval = 2
 
-type AgentConfig struct {
+type AgentEnvs struct {
 	Log            *slog.Logger
 	ServerAddr     string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 }
 
-type EnvAgentConfig struct {
-	PollInterval   *int    `env:"POLL_INTERVAL"`
-	ReportInterval *int    `env:"REPORT_INTERVAL"`
-	ServerAddr     *string `env:"ADDRESS"`
+type envAgentConfig struct {
+	ServerAddr     string `env:"ADDRESS"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
 }
 
-func NewAgentConfig() (*AgentConfig, error) {
-	cfg := AgentConfig{}
-	cfg.Log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+func NewAgentConfig() (*AgentEnvs, error) {
+	logger := NewLogger(os.Stdout, defaultLogLevel)
 
-	err := parseFlags(&cfg)
+	envs, err := parseAgentEnvs()
 	if err != nil {
-		return nil, errors.New("failed to create agent config: " + err.Error())
+		return nil, fmt.Errorf("failed to create agent config: %w", err)
 	}
 
-	return &cfg, nil
+	return &AgentEnvs{
+		Log:            logger,
+		ServerAddr:     envs.ServerAddr,
+		PollInterval:   time.Duration(envs.PollInterval) * time.Second,
+		ReportInterval: time.Duration(envs.ReportInterval) * time.Second,
+	}, nil
 }
 
-func parseFlags(agentCfg *AgentConfig) error {
-	var cfg EnvAgentConfig
-	if err := env.Parse(&cfg); err != nil {
-		return errors.New("failed to parse env vars: " + err.Error())
+func parseAgentEnvs() (*envAgentConfig, error) {
+	envConfig := &envAgentConfig{
+		PollInterval:   defaultPoolInterval,
+		ReportInterval: defaultReportInterval,
+		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
 	}
 
-	serverAddr := flags.NewServerAddressFlag(defaultAddress, defaultPort)
-	poolIntervalInSeconds := flags.NewDurationFlag(time.Second, DefaultPoolInterval)
-	reportIntervalInSeconds := flags.NewDurationFlag(time.Second, DefaultReportInterval)
-
-	flag.Var(serverAddr, "a", "server address - usage: ADDRESS:PORT")
-	flag.Var(poolIntervalInSeconds, "p", "sets the frequency of polling the metrics in seconds")
-	flag.Var(reportIntervalInSeconds, "r", "sets the frequency of sending metrics to the server in seconds")
+	flag.StringVar(&envConfig.ServerAddr, "a", envConfig.ServerAddr,
+		"server address - usage: ADDRESS:PORT")
+	flag.IntVar(&envConfig.PollInterval, "p", envConfig.PollInterval,
+		"sets the frequency of polling the metrics in seconds")
+	flag.IntVar(&envConfig.ReportInterval, "r", envConfig.ReportInterval,
+		"sets the frequency of sending metrics to the server in seconds")
 
 	flag.Parse()
 
-	host, port, err := splitAddressParts(cfg.ServerAddr)
-	if err != nil {
-		return fmt.Errorf("agent config failed: %w", err)
+	if err := env.Parse(envConfig); err != nil {
+		return nil, fmt.Errorf("agent configs: %w", err)
 	}
 
-	serverAddr = flags.NewServerAddressFlag(host, port)
-	setConfig(cfg.ReportInterval, reportIntervalInSeconds)
-	setConfig(cfg.PollInterval, poolIntervalInSeconds)
-
-	agentCfg.PollInterval = poolIntervalInSeconds.GetDuration()
-	agentCfg.ReportInterval = reportIntervalInSeconds.GetDuration()
-	agentCfg.ServerAddr = serverAddr.String()
-
-	return nil
-}
-
-func setConfig(interval *int, config *flags.DurationFlag) {
-	if interval != nil {
-		config.Length = *interval
-	}
-}
-
-func splitAddressParts(address *string) (string, int, error) {
-	const numberOfHostPortParts = 2
-	if address == nil {
-		return "", 0, errors.New("invalid address: missing parts")
-	}
-	parts := strings.Split(*address, ":")
-	if len(parts) != numberOfHostPortParts {
-		return "", 0, errors.New("invalid address: missing parts")
-	}
-	port, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return "", 0, errors.New("invalid address: port must be an int value")
-	}
-
-	return parts[0], port, nil
+	return envConfig, nil
 }

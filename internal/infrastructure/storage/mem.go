@@ -39,7 +39,7 @@ type Storage interface {
 }
 
 func NewStorage(cfg *config.ServerConfig) (Storage, error) {
-	if cfg.StoreInterval != 0 {
+	if cfg.Envs.StoreInterval >= 0 {
 		return NewFileStorage(cfg)
 	}
 

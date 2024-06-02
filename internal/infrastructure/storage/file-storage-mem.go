@@ -21,7 +21,7 @@ type FileStorage struct {
 }
 
 func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
-	file, err := os.OpenFile(cfg.StorePath, os.O_RDWR|os.O_CREATE, ownerFilePerm)
+	file, err := os.OpenFile(cfg.Envs.StorePath, os.O_RDWR|os.O_CREATE, ownerFilePerm)
 	if err != nil {
 		return nil, fmt.Errorf("store failed to open file: %w", err)
 	}
@@ -45,7 +45,7 @@ func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
 		return nil, fmt.Errorf("storage mem filed to load the file: %w", err)
 	}
 
-	if cfg.StoreInterval > 0 {
+	if cfg.Envs.StoreInterval > 0 {
 		go fs.periodicSave()
 	}
 
@@ -53,7 +53,7 @@ func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
 }
 
 func (fs *FileStorage) periodicSave() {
-	ticker := time.NewTicker(time.Second * time.Duration(fs.cfg.StoreInterval))
+	ticker := time.NewTicker(time.Second * time.Duration(fs.cfg.Envs.StoreInterval))
 	defer ticker.Stop()
 
 	for {
@@ -140,28 +140,16 @@ func (fs *FileStorage) loadFromFile() error {
 	return nil
 }
 
-func (fs *FileStorage) createCounterRecord(metric entities.Metrics) error {
-	if err := fs.MemStorage.createCounterRecord(metric); err != nil {
+func (fs *FileStorage) CreateRecord(metrics entities.Metrics) error {
+	if err := fs.MemStorage.CreateRecord(metrics); err != nil {
 		return fmt.Errorf("file store: %w", err)
 	}
 
-	if fs.cfg.StoreInterval == 0 {
+	if fs.cfg.Envs.StoreInterval == 0 {
 		err := fs.saveToFile()
 		if err != nil {
 			return fmt.Errorf("server service failed to save data to file %w", err)
 		}
-	}
-
-	return nil
-}
-
-func (fs *FileStorage) createGaugeRecord(metric entities.Metrics) error {
-	if err := fs.MemStorage.createGaugeRecord(metric); err != nil {
-		return fmt.Errorf("file store: %w", err)
-	}
-
-	if fs.cfg.StoreInterval == 0 {
-		return fs.saveToFile()
 	}
 
 	return nil

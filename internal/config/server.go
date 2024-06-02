@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -44,7 +43,6 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.Parse()
 
 	if err := env.Parse(envConfig); err != nil {
-		fmt.Printf("%+v\n", err)
 		return nil, fmt.Errorf("server configs: %w", err)
 	}
 
@@ -52,37 +50,26 @@ func parseServerEnvs() (*serverEnvs, error) {
 }
 
 type ServerConfig struct {
-	Log *slog.Logger
-	*serverEnvs
+	Log             *slog.Logger
+	Envs            *serverEnvs
 	ShutdownTimeout int
 }
 
 func NewServerConfig() (*ServerConfig, error) {
+	logger := NewLogger(os.Stdout, defaultLogLevel)
+
 	envs, err := parseServerEnvs()
 	if err != nil {
 		return nil, errors.New("failed to create the config " + err.Error())
 	}
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: getLevel(envs.LogLevel)}))
+
+	if envs.LogLevel != defaultLogLevel {
+		logger = NewLogger(os.Stdout, envs.LogLevel)
+	}
 
 	return &ServerConfig{
 		Log:             logger,
-		serverEnvs:      envs,
+		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
 	}, nil
-}
-
-func getLevel(level string) slog.Level {
-	switch strings.ToLower(level) {
-	case "debug":
-		return slog.LevelDebug
-	case "info":
-		return slog.LevelInfo
-	case "warn":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
-	default:
-
-		return getLevel(defaultLogLevel)
-	}
 }

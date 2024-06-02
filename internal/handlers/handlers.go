@@ -23,21 +23,22 @@ func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
 	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs}
 }
 
-func (h *ServerHandler) InitHandlers() http.Handler {
+func (sh *ServerHandler) InitHandlers() http.Handler {
 	mux := chi.NewMux()
+	mux.Use(sh.RequestLogger, sh.WithCompressedResponse)
+
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain
-	mux.Get("/value/{metricType}/{metricName}", h.getMetricValue)
-	mux.Get("/", h.showMetrics)
+	mux.Get("/value/{metricType}/{metricName}", sh.getMetricValue)
+	mux.Get("/", sh.showMetrics)
 
 	// handlers to handle metrics following the format:
 	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VALUE>
 	// Content-Type: text/plain
-	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
+	mux.Post("/update/{metricType}/{metricName}/{metricValue}", sh.handleUploads)
 
-	mux.Post("/update/", h.handleJSONUploads)
-	mux.Post("/value/", h.getJSONMetricValue)
+	mux.Post("/update/", sh.handleJSONUploads)
+	mux.Post("/value/", sh.getJSONMetricValue)
 
-	mux.Use(h.RequestLogger, h.WithCompressedResponse)
 	return mux
 }

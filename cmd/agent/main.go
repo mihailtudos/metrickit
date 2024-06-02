@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/mihailtudos/metrickit/pkg/helpers"
+	"fmt"
 	"os"
 	"time"
 
@@ -10,14 +10,20 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/agent"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 func main() {
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
-		agentCfg.Log.ErrorContext(context.Background(), "failed to get agent configurations: ", helpers.ErrAttr(err))
+		fmt.Println(err)
+		agentCfg.Log.ErrorContext(context.Background(),
+			"failed to get agent configurations: ",
+			helpers.ErrAttr(err),
+		)
 		os.Exit(-1)
 	}
+
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
 	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log)

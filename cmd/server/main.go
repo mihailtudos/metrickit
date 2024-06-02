@@ -8,9 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
@@ -33,11 +30,11 @@ func main() {
 
 func run(cfg *config.ServerConfig) error {
 	cfg.Log.DebugContext(context.Background(), "provided config",
-		slog.String("ServerAddress", cfg.Address),
-		slog.String("StorePath", cfg.StorePath),
-		slog.String("LogLevel", cfg.LogLevel),
-		slog.Int("StoreInterval", cfg.StoreInterval),
-		slog.Bool("ReStore", cfg.ReStore))
+		slog.String("ServerAddress", cfg.Envs.Address),
+		slog.String("StorePath", cfg.Envs.StorePath),
+		slog.String("LogLevel", cfg.Envs.LogLevel),
+		slog.Int("StoreInterval", cfg.Envs.StoreInterval),
+		slog.Bool("ReStore", cfg.Envs.ReStore))
 
 	store, err := storage.NewStorage(cfg)
 	if err != nil {
@@ -47,36 +44,15 @@ func run(cfg *config.ServerConfig) error {
 	repos := repositories.NewRepository(store)
 	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log)
 
-	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Address)
+	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Envs.Address)
 	srv := &http.Server{
-		Addr:    cfg.Address,
+		Addr:    cfg.Envs.Address,
 		Handler: h.InitHandlers(),
 	}
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("could not listen on %s: %v\n", cfg.Address, err)
-		}
-	}()
-
-	<-quit
-	cfg.Log.DebugContext(context.Background(), "shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(cfg.ShutdownTimeout)*time.Second)
-	defer cancel()
-	err = store.Close()
-	if err != nil {
-		cfg.Log.ErrorContext(ctx, "failed to close the file", err)
+	if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("could not listen on %s: %v\n", cfg.Envs.Address, err)
 	}
 
-	if err = srv.Shutdown(ctx); err != nil {
-		cfg.Log.ErrorContext(ctx, "server forced to shutdown", err)
-	}
-
-	cfg.Log.DebugContext(context.Background(), "server exiting")
 	return nil
 }
