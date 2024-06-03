@@ -39,6 +39,8 @@ func (m *MetricsCollectionService) Collect() error {
 }
 
 func (m *MetricsCollectionService) Send(serverAddr string) error {
+	url := fmt.Sprintf("http://%s/update/", serverAddr)
+
 	metrics, err := m.mRepo.GetAll()
 	if err != nil {
 		return fmt.Errorf("failed to send the metrics: %w", err)
@@ -52,7 +54,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 			MType: string(entities.CounterMetricName),
 			Delta: &val,
 		}
-		err := m.publishMetric(serverAddr, "application/json", &metric)
+		err := m.publishMetric(url, "application/json", &metric)
 		if err != nil {
 			m.logger.DebugContext(context.Background(),
 				"publishing the counter metrics failed: "+err.Error())
@@ -68,7 +70,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 			MType: string(entities.GaugeMetricName),
 			Value: &val,
 		}
-		err := m.publishMetric(serverAddr, "application/json", &metric)
+		err := m.publishMetric(url, "application/json", &metric)
 		if err != nil {
 			m.logger.ErrorContext(context.Background(),
 				"publishing the gauge metrics failed: "+err.Error())
@@ -80,9 +82,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 
 var ErrJSONMarshal = errors.New("failed to marshal to JSON")
 
-func (m *MetricsCollectionService) publishMetric(serverAddr, contentType string, metric *entities.Metrics) error {
-	url := fmt.Sprintf("http://%s/update/", serverAddr)
-
+func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
 	mJSONStruct, err := json.Marshal(metric)
 	if err != nil {
 		return fmt.Errorf("failed to public metric: %w", ErrJSONMarshal)
