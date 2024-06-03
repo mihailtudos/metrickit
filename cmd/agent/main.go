@@ -21,7 +21,7 @@ func main() {
 			"failed to get agent configurations: ",
 			helpers.ErrAttr(err),
 		)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	metricsStore := storage.NewMetricsCollection()
