@@ -51,7 +51,7 @@ func run(cfg *config.ServerConfig) error {
 	}
 
 	if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("could not listen on %s: %v\n", cfg.Envs.Address, err)
+		return fmt.Errorf("failed to start the server: %w", err)
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 func main() {
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
-		fmt.Println(err)
 		agentCfg.Log.ErrorContext(context.Background(),
 			"failed to get agent configurations: ",
 			helpers.ErrAttr(err),
@@ -37,11 +35,15 @@ func main() {
 		select {
 		case <-poolTicker.C:
 			if err := metricsService.MetricsService.Collect(); err != nil {
-				agentCfg.Log.ErrorContext(context.Background(), "failed to collect the metrics: ", helpers.ErrAttr(err))
+				agentCfg.Log.ErrorContext(context.Background(),
+					"failed to collect the metrics: ",
+					helpers.ErrAttr(err))
 			}
 		case <-reportTicker.C:
 			if err := metricsService.MetricsService.Send(agentCfg.ServerAddr); err != nil {
-				agentCfg.Log.ErrorContext(context.Background(), "failed to publish the metrics: "+err.Error())
+				agentCfg.Log.ErrorContext(context.Background(),
+					"failed to publish the metrics: ",
+					helpers.ErrAttr(err))
 			}
 			metricsStore.Clear()
 		}

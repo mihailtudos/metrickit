@@ -22,7 +22,7 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	if entities.MetricType(metricType) != entities.GaugeMetricName &&
 		entities.MetricType(metricType) != entities.CounterMetricName ||
 		metricValue == "" {
-		sh.logger.ErrorContext(r.Context(),
+		sh.logger.DebugContext(r.Context(),
 			"invalid metric type")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -34,7 +34,7 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	case entities.CounterMetricName:
 		delta, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			sh.logger.ErrorContext(r.Context(),
+			sh.logger.DebugContext(r.Context(),
 				"failed to convert counter value to integer",
 				slog.String("delta", metricValue))
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -43,16 +43,17 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 
 		metric := entities.Metrics{ID: metricName, MType: metricType, Delta: &delta}
 		if err = sh.services.MetricsService.Create(metric); err != nil {
-			sh.logger.ErrorContext(r.Context(),
+			sh.logger.DebugContext(r.Context(),
 				"failed to create the metric",
-				slog.String("err", err.Error()), slog.String("url", r.RequestURI))
+				helpers.ErrAttr(err),
+				slog.String("url", r.RequestURI))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	case entities.GaugeMetricName:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			sh.logger.ErrorContext(r.Context(),
+			sh.logger.DebugContext(r.Context(),
 				"failed to convert gauge value to float64",
 				slog.String("value", metricValue))
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -60,9 +61,9 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 		}
 		metric := entities.Metrics{ID: metricName, MType: metricType, Value: &value}
 		if err = sh.services.MetricsService.Create(metric); err != nil {
-			sh.logger.ErrorContext(r.Context(),
+			sh.logger.DebugContext(r.Context(),
 				"failed to create the metric",
-				slog.String("err", err.Error()),
+				helpers.ErrAttr(err),
 				slog.String("url", r.RequestURI))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -87,7 +88,8 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 	defer func() {
 		if err := r.Body.Close(); err != nil {
 			sh.logger.ErrorContext(r.Context(),
-				"failed to close request body")
+				"failed to close request body",
+				helpers.ErrAttr(err))
 		}
 	}()
 
@@ -137,19 +139,22 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 		if err := sh.services.MetricsService.Create(metric); err != nil {
 			sh.logger.ErrorContext(r.Context(),
 				"failed to create the gauge metric",
-				helpers.ErrAttr(err),
-			)
+				helpers.ErrAttr(err))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	default:
+		sh.logger.DebugContext(r.Context(),
+			"no valid metric received")
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 
 	updatedMetric, err := sh.getResponseMetric(metric)
 	if err != nil {
-		sh.logger.ErrorContext(r.Context(), "failed generate response", helpers.ErrAttr(err))
+		sh.logger.ErrorContext(r.Context(),
+			"failed generate response",
+			helpers.ErrAttr(err))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
