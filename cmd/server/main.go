@@ -44,7 +44,7 @@ func run(cfg *config.ServerConfig) error {
 	repos := repositories.NewRepository(store)
 	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log)
 
-	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Envs.Address)
+	cfg.Log.DebugContext(context.Background(), "running server 🔥", slog.String("address", cfg.Envs.Address))
 	srv := &http.Server{
 		Addr:    cfg.Envs.Address,
 		Handler: h.InitHandlers(),
