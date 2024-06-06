@@ -6,15 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 var ErrUnknownMetric = errors.New("unknown metric type")
@@ -163,9 +164,9 @@ func (sh *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, 
 	return nil, ErrUnknownMetric
 }
 
-func (h *ServerHandler) handleDBPing(w http.ResponseWriter, r *http.Request) {
-	if err := h.db.Ping(); err != nil {
-		h.logger.ErrorContext(r.Context(),
+func (sh *ServerHandler) handleDBPing(w http.ResponseWriter, r *http.Request) {
+	if err := sh.db.Ping(); err != nil {
+		sh.logger.ErrorContext(r.Context(),
 			"failed to ping the DB",
 			helpers.ErrAttr(err))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -173,5 +174,4 @@ func (h *ServerHandler) handleDBPing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
-	return
 }

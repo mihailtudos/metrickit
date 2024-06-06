@@ -22,9 +22,9 @@ type serverEnvs struct {
 	Address       string `env:"ADDRESS"`
 	LogLevel      string `env:"LOG_LEVEL"`
 	StorePath     string `env:"FILE_STORAGE_PATH"`
+	D3SN          string `env:"DATABASE_DSN"`
 	StoreInterval int    `env:"STORE_INTERVAL"`
 	ReStore       bool   `env:"RESTORE"`
-	D3SN          string `env:"DATABASE_DSN"`
 }
 
 func parseServerEnvs() (*serverEnvs, error) {
@@ -59,8 +59,8 @@ func parseServerEnvs() (*serverEnvs, error) {
 type ServerConfig struct {
 	Log             *slog.Logger
 	Envs            *serverEnvs
-	ShutdownTimeout int
 	DB              *sql.DB
+	ShutdownTimeout int
 }
 
 func NewServerConfig() (*ServerConfig, error) {

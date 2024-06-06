@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/handlers"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/server"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 func main() {
@@ -23,22 +22,9 @@ func main() {
 		log.Fatal("failed to provide server config: " + err.Error())
 	}
 
-	db, err := appConfig.InitPostgresDB(appConfig.Envs.D3SN)
-	if err != nil {
-		log.Fatal("failed to initiate the db: " + err.Error())
-	}
-	appConfig.DB = db
-	defer func() {
-		if err := appConfig.DB.Close(); err != nil {
-			appConfig.Log.ErrorContext(context.Background(),
-				"failed to close the DB connection",
-				helpers.ErrAttr(err))
-		}
-	}()
-
 	if err = run(appConfig); err != nil {
 		appConfig.Log.ErrorContext(context.Background(), "failed to run the server: "+err.Error())
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
@@ -49,6 +35,19 @@ func run(cfg *config.ServerConfig) error {
 		slog.String("LogLevel", cfg.Envs.LogLevel),
 		slog.Int("StoreInterval", cfg.Envs.StoreInterval),
 		slog.Bool("ReStore", cfg.Envs.ReStore))
+
+	db, err := cfg.InitPostgresDB(cfg.Envs.D3SN)
+	if err != nil {
+		log.Fatal("failed to initiate the db: " + err.Error())
+	}
+	cfg.DB = db
+	defer func() {
+		if err := cfg.DB.Close(); err != nil {
+			cfg.Log.ErrorContext(context.Background(),
+				"failed to close the DB connection",
+				helpers.ErrAttr(err))
+		}
+	}()
 
 	store, err := storage.NewStorage(cfg)
 	if err != nil {
