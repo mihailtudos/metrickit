@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"embed"
 	"log/slog"
 	"net/http"
 
@@ -9,27 +10,35 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type HandlerStr struct {
-	services *server.Service
-	logger   *slog.Logger
+//go:embed templates
+var templatesFs embed.FS
+
+type ServerHandler struct {
+	services    *server.Service
+	logger      *slog.Logger
+	TemplatesFs embed.FS
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger) *HandlerStr {
-	return &HandlerStr{services: services, logger: logger}
+func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
+	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs}
 }
 
-func (h *HandlerStr) InitHandlers() http.Handler {
+func (sh *ServerHandler) InitHandlers() http.Handler {
 	mux := chi.NewMux()
+	mux.Use(sh.RequestLogger, sh.WithCompressedResponse)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain
-	mux.Get("/value/{metricType}/{metricName}", h.getMetricValue)
-	mux.Get("/", h.showMetrics)
+	mux.Get("/value/{metricType}/{metricName}", sh.getMetricValue)
+	mux.Get("/", sh.showMetrics)
 
 	// handlers to handle metrics following the format:
 	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VALUE>
 	// Content-Type: text/plain
-	mux.Post("/update/{metricType}/{metricName}/{metricValue}", h.handleUploads)
+	mux.Post("/update/{metricType}/{metricName}/{metricValue}", sh.handleUploads)
+
+	mux.Post("/update/", sh.handleJSONUploads)
+	mux.Post("/value/", sh.getJSONMetricValue)
 
 	return mux
 }

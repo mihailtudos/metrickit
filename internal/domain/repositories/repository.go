@@ -5,26 +5,19 @@ import (
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
-type GaugeRepository interface {
-	Create(key string, gauge entities.Gauge) error
-	Get(key string) (entities.Gauge, error)
-	GetAll() (map[string]entities.Gauge, error)
-}
-
-type CounterRepository interface {
-	Create(key string, counter entities.Counter) error
-	Get(key string) (entities.Counter, error)
-	GetAll() (map[string]entities.Counter, error)
+type MetricsRepository interface {
+	Create(metric entities.Metrics) error
+	Get(key entities.MetricName, mType entities.MetricType) (entities.Metrics, error)
+	GetAll() (*storage.MetricsStorage, error)
+	GetAllByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
 }
 
 type Repository struct {
-	GaugeRepository
-	CounterRepository
+	MetricsRepository MetricsRepository
 }
 
-func NewRepository(store *storage.MemStorage) *Repository {
+func NewRepository(store storage.Storage) *Repository {
 	return &Repository{
-		GaugeRepository:   NewGaugeMemRepository(store),
-		CounterRepository: NewCounterMemRepository(store),
+		MetricsRepository: NewMetricsMemRepository(store),
 	}
 }

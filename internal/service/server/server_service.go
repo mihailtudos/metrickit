@@ -1,35 +1,26 @@
 package server
 
 import (
-	"errors"
 	"log/slog"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
+	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
-var ErrInvalidValue = errors.New("invalid value given")
-
-type CounterService interface {
-	Create(key string, val string) error
-	Get(key string) (entities.Counter, error)
-	GetAll() (map[string]entities.Counter, error)
-}
-
-type GaugeService interface {
-	Create(key string, val string) error
-	Get(key string) (entities.Gauge, error)
-	GetAll() (map[string]entities.Gauge, error)
+type Metrics interface {
+	Create(metric entities.Metrics) error
+	Get(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error)
+	GetAll() (*storage.MetricsStorage, error)
+	GetAllByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
 }
 
 type Service struct {
-	CounterService
-	GaugeService
+	MetricsService Metrics
 }
 
-func NewService(repository *repositories.Repository, logger *slog.Logger) *Service {
+func NewMetricsService(repository *repositories.Repository, logger *slog.Logger) *Service {
 	return &Service{
-		GaugeService:   NewGaugeService(repository.GaugeRepository, logger),
-		CounterService: NewCounterService(repository.CounterRepository, logger),
+		MetricsService: NewMetricService(repository.MetricsRepository, logger),
 	}
 }

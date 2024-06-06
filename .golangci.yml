@@ -365,7 +365,7 @@ linters-settings:
     no-global: "all"
     # Enforce using methods that accept a context.
     context-only: true
-    # Enforce using static values for log messages.
+    # Enforce using templates values for log messages.
     static-msg: false
     # Enforce using constants instead of raw keys.
     no-raw-keys: false

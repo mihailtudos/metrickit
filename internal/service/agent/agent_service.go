@@ -12,7 +12,7 @@ type MetricsService interface {
 }
 
 type AgentService struct {
-	MetricsService
+	MetricsService MetricsService
 }
 
 func NewAgentService(repository *repositories.AgentRepository, logger *slog.Logger) *AgentService {

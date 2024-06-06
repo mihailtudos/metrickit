@@ -1,7 +1,9 @@
 package repositories
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"math/rand"
 	"runtime"
 
@@ -10,14 +12,17 @@ import (
 )
 
 type MetricsCollectionMemRepository struct {
-	store *storage.MetricsCollection
+	store  *storage.MetricsCollection
+	logger *slog.Logger
 }
 
-func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection) *MetricsCollectionMemRepository {
-	return &MetricsCollectionMemRepository{store: collection}
+func NewMetricsCollectionMemRepository(collection *storage.MetricsCollection,
+	logger *slog.Logger) *MetricsCollectionMemRepository {
+	return &MetricsCollectionMemRepository{store: collection, logger: logger}
 }
 
 func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
+	//nolint:exhaustive // entities.PollCount is of type Counter
 	gaugeMetrics := map[entities.MetricName]entities.Gauge{
 		entities.RandomValue:   entities.Gauge(rand.Float64()),
 		entities.Alloc:         entities.Gauge(stats.Alloc),
@@ -57,6 +62,18 @@ func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
 		return errors.New("failed to store the metrics" + err.Error())
 	}
 
+	pc, err := m.store.GetCounterMetric(entities.PollCount)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return errors.New("store metric: " + err.Error())
+		}
+		return errors.New("failed to get counter metric" + err.Error())
+	}
+
+	m.logger.DebugContext(
+		context.Background(),
+		"updated metrics",
+		slog.Int64("PoolCount", *pc.Delta))
 	return nil
 }
 

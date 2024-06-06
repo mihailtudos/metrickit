@@ -15,7 +15,82 @@ show/cover:
 gci/report:
 	cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json
 
-.PHONY: run/server, run/agent, run/tests, show/cover, gci/report
+agent/build:
+	cd cmd/agent && \
+      go build -buildvcs=false  -o agent
+
+server/build:
+	cd cmd/server && \
+      go build -buildvcs=false  -o server
+
+autotest/run1: server/build
+	metricstest -test.v -test.run="^TestIteration1$$" \
+		-binary-path=cmd/server/server
+
+autotest/run2: agent/build
+	metricstest -test.v -test.run="^TestIteration2[AB]*$$" \
+		-source-path=. \
+ 		-agent-binary-path=cmd/agent/agent
+
+autotest/run3:
+	metricstest -test.v -test.run="^TestIteration3[AB]*$$" \
+		 -source-path=. \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server
+
+autotest/run4:
+	ADDRESS=localhost:8080 TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration4$$" \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=. \
+        -agent-binary-path=cmd/agent/agent \
+
+
+autotest/run5:
+	ADDRESS=localhost:8080 TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration5$$" \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=. \
+        -agent-binary-path=cmd/agent/agent \
+
+autotest/run6:
+	ADDRESS=localhost:8080 TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration6$$" \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=. \
+        -agent-binary-path=cmd/agent/agent \
+
+autotest/run7:
+	TEMP_FILE=out.txt metricstest -test.v -test.run=^TestIteration7 \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=. \
+        -agent-binary-path=cmd/agent/agent \
+
+autotest/run8:
+	TEMP_FILE=out.txt metricstest -test.v -test.run=^TestIteration8$ \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=.-agent-binary-path=cmd/agent/agent \
+
+autotest/run9:
+	TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration9$$" \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=. \
+        -file-storage-path=/tmp/metrics-db.json \
+        -agent-binary-path=cmd/agent/agent \
+
+.PHONY: run/server, run/agent, run/tests, show/cover, gci/report, \
+		autotest/run1, autotest/run2, autotest/run3, \
+		autotest/run4, autotest/run5, autotest/run6, \
+		autotest/run7, autotest/run8, autotest/run9
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 

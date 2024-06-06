@@ -1,99 +1,148 @@
 package storage
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"sync"
 
+	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
 var ErrNotFound = errors.New("item not found")
 
+type MetricsStorage struct {
+	Counter map[entities.MetricName]entities.Counter `json:"counter"`
+	Gauge   map[entities.MetricName]entities.Gauge   `json:"gauge"`
+}
+
+func NewMetricsStorage() *MetricsStorage {
+	return &MetricsStorage{
+		Counter: make(map[entities.MetricName]entities.Counter),
+		Gauge:   make(map[entities.MetricName]entities.Gauge),
+	}
+}
+
 type MemStorage struct {
-	Counter map[string]entities.Counter
-	Gauge   map[string]entities.Gauge
-	mu      sync.Mutex
+	MetricsStorage
+	cfg *config.ServerConfig
+	mu  sync.Mutex
 }
 
-func NewMemStorage() *MemStorage {
-	return &MemStorage{
-		mu:      sync.Mutex{},
-		Counter: make(map[string]entities.Counter),
-		Gauge:   make(map[string]entities.Gauge),
+type Storage interface {
+	CreateRecord(metrics entities.Metrics) error
+	GetRecord(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error)
+	GetAllRecords() (*MetricsStorage, error)
+	GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
+	Close() error
+}
+
+func NewStorage(cfg *config.ServerConfig) (Storage, error) {
+	if cfg.Envs.StoreInterval >= 0 {
+		return NewFileStorage(cfg)
+	}
+
+	return NewMemStorage(cfg)
+}
+
+func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
+	cfg.Log.DebugContext(context.Background(), "created mem storage")
+
+	ms := &MemStorage{
+		mu: sync.Mutex{},
+		MetricsStorage: MetricsStorage{
+			Counter: make(map[entities.MetricName]entities.Counter),
+			Gauge:   make(map[entities.MetricName]entities.Gauge),
+		},
+		cfg: cfg,
+	}
+
+	return ms, nil
+}
+
+func (ms *MemStorage) CreateRecord(metrics entities.Metrics) error {
+	ms.cfg.Log.DebugContext(context.Background(), fmt.Sprintf("creating %s record", metrics.MType))
+
+	switch entities.MetricType(metrics.MType) {
+	case entities.CounterMetricName:
+		if err := ms.createCounterRecord(metrics); err != nil {
+			return fmt.Errorf("store couter: %w", err)
+		}
+		return nil
+	case entities.GaugeMetricName:
+		if err := ms.createGaugeRecord(metrics); err != nil {
+			return fmt.Errorf("store gauge: %w", err)
+		}
+		return nil
+	default:
+		return errors.New("store: unsupported record type " + metrics.MType)
 	}
 }
 
-func (ms *MemStorage) CreateCounterRecord(key string, record entities.Counter) error {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
+func (ms *MemStorage) createCounterRecord(metric entities.Metrics) error {
+	if ms.Counter == nil {
+		return errors.New("mem not initialized")
+	}
 
-	_, ok := ms.Counter[key]
+	ms.mu.Lock()
+	_, ok := ms.Counter[entities.MetricName(metric.ID)]
 	if !ok {
-		ms.Counter[key] = record
+		ms.Counter[entities.MetricName(metric.ID)] = entities.Counter(*metric.Delta)
 	} else {
-		ms.Counter[key] += record
+		ms.Counter[entities.MetricName(metric.ID)] += entities.Counter(*metric.Delta)
 	}
+	ms.mu.Unlock()
 
 	return nil
 }
 
-func (ms *MemStorage) CreateGaugeRecord(key string, record entities.Gauge) error {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
+func (ms *MemStorage) createGaugeRecord(metric entities.Metrics) error {
+	if ms.Gauge == nil {
+		return errors.New("gauge memory not initialized")
+	}
 
-	ms.Gauge[key] = record
+	ms.mu.Lock()
+	ms.Gauge[entities.MetricName(metric.ID)] = entities.Gauge(*metric.Value)
+	ms.mu.Unlock()
+
 	return nil
 }
 
-func (ms *MemStorage) GetGaugeRecord(key string) (entities.Gauge, error) {
+func (ms *MemStorage) GetRecord(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
+	ms.cfg.Log.DebugContext(context.Background(), fmt.Sprintf("retrieving %s[%s] record", mType, mName))
 
-	if ms.Gauge == nil {
-		return entities.Gauge(0), errors.New("gauge storage not initiated")
+	switch mType {
+	case entities.CounterMetricName:
+		m, ok := ms.Counter[mName]
+		if !ok {
+			return entities.Metrics{}, ErrNotFound
+		}
+		val := int64(m)
+		return entities.Metrics{
+			ID:    string(mName),
+			MType: string(mType),
+			Delta: &val,
+		}, nil
+	case entities.GaugeMetricName:
+		m, ok := ms.Gauge[mName]
+		if !ok {
+			return entities.Metrics{}, ErrNotFound
+		}
+		val := float64(m)
+		return entities.Metrics{
+			ID:    string(mName),
+			MType: string(mType),
+			Value: &val,
+		}, nil
 	}
 
-	v, ok := ms.Gauge[key]
-	if !ok {
-		return entities.Gauge(0), ErrNotFound
-	}
-
-	return v, nil
+	return entities.Metrics{}, ErrNotFound
 }
 
-func (ms *MemStorage) GetCounterRecord(key string) (entities.Counter, error) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-
-	if ms.Counter == nil {
-		return entities.Counter(1), errors.New("counter storage not initiated")
-	}
-
-	v, ok := ms.Counter[key]
-	if !ok {
-		return entities.Counter(0), ErrNotFound
-	}
-
-	return v, nil
-}
-
-func (ms *MemStorage) GetAllGaugeRecords() (map[string]entities.Gauge, error) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-
-	if ms.Gauge == nil {
-		return nil, errors.New("storage not initialized")
-	}
-
-	copyMap := make(map[string]entities.Gauge)
-	for k, v := range ms.Gauge {
-		copyMap[k] = v
-	}
-
-	return copyMap, nil
-}
-
-func (ms *MemStorage) GetAllCounterRecords() (map[string]entities.Counter, error) {
+func (ms *MemStorage) GetAllRecords() (*MetricsStorage, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -101,10 +150,44 @@ func (ms *MemStorage) GetAllCounterRecords() (map[string]entities.Counter, error
 		return nil, errors.New("storage not initialized")
 	}
 
-	copyMap := make(map[string]entities.Counter)
+	copyCounterMap := make(map[entities.MetricName]entities.Counter)
+	copyGaugeMap := make(map[entities.MetricName]entities.Gauge)
 	for k, v := range ms.Counter {
-		copyMap[k] = v
+		copyCounterMap[k] = v
 	}
 
-	return copyMap, nil
+	for k, v := range ms.Gauge {
+		copyGaugeMap[k] = v
+	}
+
+	return &MetricsStorage{
+		Counter: copyCounterMap,
+		Gauge:   copyGaugeMap,
+	}, nil
+}
+
+func (ms *MemStorage) GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics,
+	error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	copyCounterMap := make(map[entities.MetricName]entities.Metrics)
+
+	switch mType {
+	case entities.CounterMetricName:
+		for k, v := range ms.Counter {
+			val := int64(v)
+			copyCounterMap[k] = entities.Metrics{ID: string(k), MType: string(mType), Delta: &val}
+		}
+	case entities.GaugeMetricName:
+		for k, v := range ms.Counter {
+			val := float64(v)
+			copyCounterMap[k] = entities.Metrics{ID: string(k), MType: string(mType), Value: &val}
+		}
+	}
+
+	return copyCounterMap, nil
+}
+
+func (ms *MemStorage) Close() error {
+	return nil
 }

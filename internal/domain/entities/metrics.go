@@ -1,15 +1,8 @@
 package entities
 
-type MetricName string
-
-type MetricsCollection struct {
-	GaugeMetrics   map[MetricName]Gauge
-	CounterMetrics map[MetricName]Counter
-}
-
-func NewMetricsCollection() *MetricsCollection {
-	return &MetricsCollection{
-		GaugeMetrics:   make(map[MetricName]Gauge),
-		CounterMetrics: make(map[MetricName]Counter),
-	}
+type Metrics struct {
+	Delta *int64   `json:"delta,omitempty"` // value for metrics of type counter
+	Value *float64 `json:"value,omitempty"` // value for metrics of type gauge
+	ID    string   `json:"id"`              // metric name
+	MType string   `json:"type"`            // metric type gauge | counter
 }

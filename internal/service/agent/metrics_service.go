@@ -1,16 +1,18 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"runtime"
-	"strconv"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
+	"github.com/mihailtudos/metrickit/pkg/compressor"
 )
 
 type MetricsCollectionService struct {
@@ -30,47 +32,76 @@ func (m *MetricsCollectionService) Collect() error {
 	runtime.ReadMemStats(&currMetric)
 
 	if err := m.mRepo.Store(&currMetric); err != nil {
-		return errors.New("failed to send the metrics " + err.Error())
+		return fmt.Errorf("failed to store the metrics: %w", err)
 	}
 
 	return nil
 }
 
 func (m *MetricsCollectionService) Send(serverAddr string) error {
+	url := fmt.Sprintf("http://%s/update/", serverAddr)
+
 	metrics, err := m.mRepo.GetAll()
 	if err != nil {
-		m.logger.ErrorContext(context.Background(), fmt.Sprintf("failed to send the metrics: %v", err))
-		return errors.New("failed to send the metrics: " + err.Error())
+		return fmt.Errorf("failed to send the metrics: %w", err)
 	}
 
 	m.logger.DebugContext(context.Background(), "publishing counter metrics")
 	for k, v := range metrics.CounterMetrics {
-		val := strconv.Itoa(int(v))
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.CounterMetricName, k, val)
-		err := m.publishMetric(url)
+		val := int64(v)
+		metric := entities.Metrics{
+			ID:    string(k),
+			MType: string(entities.CounterMetricName),
+			Delta: &val,
+		}
+		err := m.publishMetric(url, "application/json", &metric)
 		if err != nil {
 			m.logger.DebugContext(context.Background(),
-				"something went wrong when publishing the counter metrics: "+err.Error())
+				"publishing the counter metrics failed: "+err.Error())
 		}
 	}
 
 	// publish gauge type metrics
 	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
 	for k, v := range metrics.GaugeMetrics {
-		val := strconv.FormatFloat(float64(v), 'f', -1, 64)
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", serverAddr, entities.GaugeMetricName, k, val)
-		err := m.publishMetric(url)
+		val := float64(v)
+		metric := entities.Metrics{
+			ID:    string(k),
+			MType: string(entities.GaugeMetricName),
+			Value: &val,
+		}
+		err := m.publishMetric(url, "application/json", &metric)
 		if err != nil {
 			m.logger.ErrorContext(context.Background(),
-				"something went wrong when publishing the gauge metrics: "+err.Error())
+				"publishing the gauge metrics failed: "+err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (m *MetricsCollectionService) publishMetric(url string) error {
-	res, err := http.Post(url, "text/plain", nil)
+var ErrJSONMarshal = errors.New("failed to marshal to JSON")
+
+func (m *MetricsCollectionService) publishMetric(url, contentType string, metric *entities.Metrics) error {
+	mJSONStruct, err := json.Marshal(metric)
+	if err != nil {
+		return fmt.Errorf("failed to public metric: %w", ErrJSONMarshal)
+	}
+
+	gzipBuffer, err := compressor.Compress(mJSONStruct)
+	if err != nil {
+		return errors.New("failed to compress metric: " + err.Error())
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(gzipBuffer))
+	if err != nil {
+		return errors.New("failed to create HTTP request: " + err.Error())
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Content-Encoding", "gzip")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		return errors.New("failed to post metric" + err.Error())
 	}
@@ -81,10 +112,10 @@ func (m *MetricsCollectionService) publishMetric(url string) error {
 		}
 	}()
 
-	if res.StatusCode == http.StatusOK {
-		m.logger.InfoContext(context.Background(), "published successfully: ", slog.String("url", url))
-		return nil
+	if res.StatusCode != http.StatusOK {
+		return errors.New("failed to publish the metric " + res.Status)
 	}
 
-	return errors.New("failed to publish the metric " + res.Status)
+	m.logger.DebugContext(context.Background(), "published successfully", slog.String("metric", string(mJSONStruct)))
+	return nil
 }

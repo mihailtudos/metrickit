@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
-	"github.com/mihailtudos/metrickit/config"
+	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/handlers"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
@@ -18,15 +22,37 @@ func main() {
 		log.Fatal("failed to provide server config: " + err.Error())
 	}
 
-	run(appConfig)
+	if err = run(appConfig); err != nil {
+		appConfig.Log.ErrorContext(context.Background(), "failed to run the server: "+err.Error())
+		os.Exit(1)
+	}
 }
 
-func run(cfg *config.ServerConfig) {
-	store := storage.NewMemStorage()
+func run(cfg *config.ServerConfig) error {
+	cfg.Log.DebugContext(context.Background(), "provided config",
+		slog.String("ServerAddress", cfg.Envs.Address),
+		slog.String("StorePath", cfg.Envs.StorePath),
+		slog.String("LogLevel", cfg.Envs.LogLevel),
+		slog.Int("StoreInterval", cfg.Envs.StoreInterval),
+		slog.Bool("ReStore", cfg.Envs.ReStore))
 
+	store, err := storage.NewStorage(cfg)
+	if err != nil {
+		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
+		return fmt.Errorf("failed to setup the memstore: %w", err)
+	}
 	repos := repositories.NewRepository(store)
-	h := handlers.NewHandler(server.NewService(repos, cfg.Log), cfg.Log)
+	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log)
 
-	cfg.Log.DebugContext(context.Background(), "running server 🔥 on port: "+cfg.Address)
-	log.Fatal(http.ListenAndServe(cfg.Address, h.InitHandlers()))
+	cfg.Log.DebugContext(context.Background(), "running server 🔥", slog.String("address", cfg.Envs.Address))
+	srv := &http.Server{
+		Addr:    cfg.Envs.Address,
+		Handler: h.InitHandlers(),
+	}
+
+	if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("failed to start the server: %w", err)
+	}
+
+	return nil
 }

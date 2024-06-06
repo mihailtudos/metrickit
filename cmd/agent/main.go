@@ -2,22 +2,28 @@ package main
 
 import (
 	"context"
-	"log"
+	"os"
 	"time"
 
-	"github.com/mihailtudos/metrickit/config"
+	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/agent"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 func main() {
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
-		log.Fatal("failed to get agent configurations: " + err.Error())
+		agentCfg.Log.ErrorContext(context.Background(),
+			"failed to get agent configurations: ",
+			helpers.ErrAttr(err),
+		)
+		os.Exit(1)
 	}
+
 	metricsStore := storage.NewMetricsCollection()
-	metricsRepo := repositories.NewAgentRepository(metricsStore)
+	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
 	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log)
 
 	poolTicker := time.NewTicker(agentCfg.PollInterval)
@@ -28,12 +34,16 @@ func main() {
 	for {
 		select {
 		case <-poolTicker.C:
-			if err := metricsService.Collect(); err != nil {
-				agentCfg.Log.ErrorContext(context.Background(), "failed to collect the metrics: "+err.Error())
+			if err := metricsService.MetricsService.Collect(); err != nil {
+				agentCfg.Log.ErrorContext(context.Background(),
+					"failed to collect the metrics: ",
+					helpers.ErrAttr(err))
 			}
 		case <-reportTicker.C:
-			if err := metricsService.Send(agentCfg.ServerAddr); err != nil {
-				agentCfg.Log.ErrorContext(context.Background(), "failed to publish the metrics: "+err.Error())
+			if err := metricsService.MetricsService.Send(agentCfg.ServerAddr); err != nil {
+				agentCfg.Log.ErrorContext(context.Background(),
+					"failed to publish the metrics: ",
+					helpers.ErrAttr(err))
 			}
 			metricsStore.Clear()
 		}
