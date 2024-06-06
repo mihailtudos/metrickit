@@ -49,10 +49,6 @@ func parseServerEnvs() (*serverEnvs, error) {
 		return nil, fmt.Errorf("server configs: %w", err)
 	}
 
-	if envConfig.D3SN == "" {
-		return nil, errors.New("server configs: missing DB connection string")
-	}
-
 	return envConfig, nil
 }
 
