@@ -1,7 +1,7 @@
 ARGS := "-a=localhost:8080"
 
 run/server:
-	go run ./cmd/server/. $(ARGS)
+	go run ./cmd/server/. -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
 	go run ./cmd/agent/. $(ARGS)
@@ -14,6 +14,9 @@ show/cover:
 
 gci/report:
 	cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json
+
+db/run:
+	docker-compose up -d db
 
 agent/build:
 	cd cmd/agent && \
@@ -87,10 +90,20 @@ autotest/run9:
         -file-storage-path=/tmp/metrics-db.json \
         -agent-binary-path=cmd/agent/agent \
 
+autotest/run10:
+	TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration9$$" \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+        -server-port=8080 \
+        -source-path=. \
+        -file-storage-path=/tmp/metrics-db.json \
+        -agent-binary-path=cmd/agent/agent \
+
 .PHONY: run/server, run/agent, run/tests, show/cover, gci/report, \
 		autotest/run1, autotest/run2, autotest/run3, \
 		autotest/run4, autotest/run5, autotest/run6, \
-		autotest/run7, autotest/run8, autotest/run9
+		autotest/run7, autotest/run8, autotest/run9, \
+		db/run
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 

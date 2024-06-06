@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"html/template"
 	"io"
 	"log/slog"
@@ -21,7 +22,6 @@ var ErrUnknownMetric = errors.New("unknown metric type")
 const contentType = "Content-Type"
 
 func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(sh.TemplatesFs)
 	tmpl, err := template.ParseFS(sh.TemplatesFs, "templates/index.html")
 	if err != nil {
 		sh.logger.ErrorContext(r.Context(), "failed to parse the template: "+err.Error())
@@ -161,4 +161,17 @@ func (sh *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, 
 	}
 
 	return nil, ErrUnknownMetric
+}
+
+func (h *ServerHandler) handleDBPing(w http.ResponseWriter, r *http.Request) {
+	if err := h.db.Ping(); err != nil {
+		h.logger.ErrorContext(r.Context(),
+			"failed to ping the DB",
+			helpers.ErrAttr(err))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
+	return
 }

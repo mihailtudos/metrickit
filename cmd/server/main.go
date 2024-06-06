@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"log"
 	"log/slog"
 	"net/http"
@@ -21,6 +22,19 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to provide server config: " + err.Error())
 	}
+
+	db, err := appConfig.InitPostgresDB(appConfig.Envs.D3SN)
+	if err != nil {
+		log.Fatal("failed to initiate the db: " + err.Error())
+	}
+	appConfig.DB = db
+	defer func() {
+		if err := appConfig.DB.Close(); err != nil {
+			appConfig.Log.ErrorContext(context.Background(),
+				"failed to close the DB connection",
+				helpers.ErrAttr(err))
+		}
+	}()
 
 	if err = run(appConfig); err != nil {
 		appConfig.Log.ErrorContext(context.Background(), "failed to run the server: "+err.Error())
@@ -42,7 +56,7 @@ func run(cfg *config.ServerConfig) error {
 		return fmt.Errorf("failed to setup the memstore: %w", err)
 	}
 	repos := repositories.NewRepository(store)
-	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log)
+	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log, cfg.DB)
 
 	cfg.Log.DebugContext(context.Background(), "running server 🔥", slog.String("address", cfg.Envs.Address))
 	srv := &http.Server{

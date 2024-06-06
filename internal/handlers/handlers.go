@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"embed"
 	"log/slog"
 	"net/http"
@@ -17,10 +18,11 @@ type ServerHandler struct {
 	services    *server.Service
 	logger      *slog.Logger
 	TemplatesFs embed.FS
+	db          *sql.DB
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
-	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs}
+func NewHandler(services *server.Service, logger *slog.Logger, conn *sql.DB) *ServerHandler {
+	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs, db: conn}
 }
 
 func (sh *ServerHandler) InitHandlers() http.Handler {
@@ -39,6 +41,8 @@ func (sh *ServerHandler) InitHandlers() http.Handler {
 
 	mux.Post("/update/", sh.handleJSONUploads)
 	mux.Post("/value/", sh.getJSONMetricValue)
+
+	mux.Get("/ping", sh.handleDBPing)
 
 	return mux
 }

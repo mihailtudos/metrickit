@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"fmt"
+	"log"
 )
 
 func Compress(data []byte) ([]byte, error) {
@@ -30,7 +31,7 @@ func Decompress(data []byte) ([]byte, error) {
 	r := flate.NewReader(bytes.NewReader(data))
 	defer func() {
 		if err := r.Close(); err != nil {
-			fmt.Println("failed to close the reader")
+			log.Println("failed to close the reader")
 		}
 	}()
 

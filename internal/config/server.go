@@ -1,6 +1,7 @@
 package config
 
 import (
+	"database/sql"
 	"errors"
 	"flag"
 	"fmt"
@@ -23,6 +24,7 @@ type serverEnvs struct {
 	StorePath     string `env:"FILE_STORAGE_PATH"`
 	StoreInterval int    `env:"STORE_INTERVAL"`
 	ReStore       bool   `env:"RESTORE"`
+	D3SN          string `env:"DATABASE_DSN"`
 }
 
 func parseServerEnvs() (*serverEnvs, error) {
@@ -39,11 +41,16 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.IntVar(&envConfig.StoreInterval, "i", envConfig.StoreInterval, "metrics store interval in seconds")
 	flag.StringVar(&envConfig.StorePath, "f", envConfig.StorePath, "metrics store file path")
 	flag.BoolVar(&envConfig.ReStore, "r", envConfig.ReStore, "metrics re-store option")
+	flag.StringVar(&envConfig.D3SN, "d", "", "DB connection string")
 
 	flag.Parse()
 
 	if err := env.Parse(envConfig); err != nil {
 		return nil, fmt.Errorf("server configs: %w", err)
+	}
+
+	if envConfig.D3SN == "" {
+		return nil, errors.New("server configs: missing DB connection string")
 	}
 
 	return envConfig, nil
@@ -53,6 +60,7 @@ type ServerConfig struct {
 	Log             *slog.Logger
 	Envs            *serverEnvs
 	ShutdownTimeout int
+	DB              *sql.DB
 }
 
 func NewServerConfig() (*ServerConfig, error) {
