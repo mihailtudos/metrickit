@@ -16,6 +16,7 @@ cmd/agent/main
 cmd/agent/agent
 cmd/server/main
 cmd/server/exec/server
+cmd/server/server
 
 # Dependency directories (remove the comment below to include it)
 vendor/
