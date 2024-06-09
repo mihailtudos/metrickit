@@ -39,6 +39,10 @@ type Storage interface {
 }
 
 func NewStorage(cfg *config.ServerConfig) (Storage, error) {
+	if cfg.DB != nil {
+		return NewPostgresStorage(cfg)
+	}
+
 	if cfg.Envs.StoreInterval >= 0 {
 		return NewFileStorage(cfg)
 	}

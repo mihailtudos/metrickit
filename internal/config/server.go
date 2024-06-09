@@ -71,9 +71,19 @@ func NewServerConfig() (*ServerConfig, error) {
 		logger = NewLogger(os.Stdout, envs.LogLevel)
 	}
 
-	return &ServerConfig{
+	cfg := &ServerConfig{
 		Log:             logger,
 		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
-	}, nil
+	}
+
+	if cfg.Envs.D3SN != "" {
+		db, err := cfg.InitPostgresDB(cfg.Envs.D3SN)
+		if err != nil {
+			return nil, fmt.Errorf("DB DSN present but failed to initiatie connection: %w", err)
+		}
+		cfg.DB = db
+	}
+
+	return cfg, nil
 }
