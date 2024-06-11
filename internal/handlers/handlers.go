@@ -40,6 +40,7 @@ func (sh *ServerHandler) InitHandlers() http.Handler {
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", sh.handleUploads)
 
 	mux.Post("/update/", sh.handleJSONUploads)
+	mux.Post("/updates/", sh.handleBatchUploads)
 	mux.Post("/value/", sh.getJSONMetricValue)
 
 	mux.Get("/ping", sh.handleDBPing)

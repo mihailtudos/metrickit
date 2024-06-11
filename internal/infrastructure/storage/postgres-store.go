@@ -60,7 +60,7 @@ func (ds *DBStore) GetRecord(mName entities.MetricName, mType entities.MetricTyp
 	switch mType {
 	case "counter":
 		err = ds.db.QueryRowContext(ctx, `
-			SELECT name, delta FROM counter_metrics WHERE name = $1
+			SELECT name, value FROM counter_metrics WHERE name = $1
 		`, mName).Scan(&metrics.ID, &metrics.Delta)
 		metrics.MType = "counter"
 	case "gauge":
@@ -115,7 +115,7 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 	}
 
 	rows, err = ds.db.QueryContext(ctx, `
-		SELECT name, delta FROM counter_metrics
+		SELECT name, value FROM counter_metrics
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all counter records: %w", err)
@@ -149,7 +149,7 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 	switch mType {
 	case entities.CounterMetricName:
 		rows, err := ds.db.QueryContext(ctx, `
-			SELECT name, delta FROM counter_metrics
+			SELECT name, value FROM counter_metrics
 		`)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get all counter records by type: %w", err)
@@ -230,11 +230,16 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 		}
 	}()
 
+	truncateGaugeTable := `TRUNCATE TABLE gauge_metrics;`
+	truncateCounterTable := `TRUNCATE TABLE counter_metrics;`
+
 	createGaugeTable := `
 		CREATE TABLE IF NOT EXISTS gauge_metrics (
 			id SERIAL PRIMARY KEY,
 			name TEXT UNIQUE NOT NULL,
-			value DOUBLE PRECISION NOT NULL
+			value DOUBLE PRECISION NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 	`
 
@@ -242,11 +247,18 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 		CREATE TABLE IF NOT EXISTS counter_metrics (
 			id SERIAL PRIMARY KEY,
 			name TEXT UNIQUE NOT NULL,
-			delta BIGINT NOT NULL CHECK  (delta >= 0) 
+			value BIGINT NOT NULL CHECK  (value >= 0) ,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 	`
 
-	createStatements := []string{createGaugeTable, createCounterTable}
+	createStatements := []string{
+		createGaugeTable,
+		createCounterTable,
+		truncateCounterTable,
+		truncateGaugeTable,
+	}
 
 	for _, stmt := range createStatements {
 		if _, err := trx.ExecContext(ctx, stmt); err != nil {
@@ -269,8 +281,8 @@ func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metr
 
 	if errors.Is(err, ErrNotFound) {
 		_, err = ds.db.ExecContext(ctx, `
-			INSERT INTO counter_metrics (name, delta) VALUES ($1, $2)
-			ON CONFLICT (name) DO UPDATE SET delta = EXCLUDED.delta
+			INSERT INTO counter_metrics (name, value) VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value
 		`, metric.ID, *metric.Delta)
 		if err != nil {
 			return fmt.Errorf("failed to create new counter metric: %w", err)
@@ -279,12 +291,101 @@ func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metr
 		newValue := *metric.Delta + *existingMetric.Delta
 		metric.Delta = &newValue
 		_, err = ds.db.ExecContext(ctx, `
-			INSERT INTO counter_metrics (name, delta) VALUES ($1, $2)
-			ON CONFLICT (name) DO UPDATE SET delta = EXCLUDED.delta
+			INSERT INTO counter_metrics (name, value) VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value
 		`, metric.ID, *metric.Delta)
 		if err != nil {
 			return fmt.Errorf("failed to update existing counter metric: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
+	counterMetrics := make([]entities.Metrics, 0)
+	gaugeMetrics := make([]entities.Metrics, 0)
+
+	for _, metric := range metrics {
+		switch entities.MetricType(metric.MType) {
+		case entities.CounterMetricName:
+			counterMetrics = append(counterMetrics, metric)
+		case entities.GaugeMetricName:
+			gaugeMetrics = append(gaugeMetrics, metric)
+		}
+	}
+
+	ctx := context.Background()
+
+	if len(counterMetrics) > 0 {
+		existingCounter, err := ds.GetAllRecordsByType(entities.CounterMetricName)
+		if err != nil {
+			return fmt.Errorf("failed to get existing counter metrics: %w", err)
+		}
+
+		for i, metric := range metrics {
+			v, ok := existingCounter[entities.MetricName(metric.ID)]
+			if ok {
+				*metric.Delta += *v.Delta
+				metrics[i] = metric
+			}
+		}
+		if err := ds.storeBatchMetrics(ctx, counterMetrics); err != nil {
+			return fmt.Errorf("store counter metrics failed %w", err)
+		}
+	}
+
+	if len(gaugeMetrics) > 0 {
+		if err := ds.storeBatchMetrics(ctx, gaugeMetrics); err != nil {
+			return fmt.Errorf("store gauge metrics failed %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Metrics) error {
+	tx, err := ds.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction %w", err)
+	}
+	defer tx.Rollback()
+	countersUpdateStmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO counter_metrics (name, value)
+		VALUES ($1, $2)
+		ON CONFLICT (name) DO UPDATE
+		SET value = excluded.value, updated_at = NOW();
+	`)
+
+	gaugesUpdateStmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO gauge_metrics (name, value)
+		VALUES ($1, $2)
+		ON CONFLICT (name) DO UPDATE
+		SET value = excluded.value, updated_at = NOW();
+	`)
+
+	for _, metric := range metrics {
+		if metric.Delta != nil {
+			_, err = countersUpdateStmt.ExecContext(ctx, metric.ID, metric.Delta)
+			if err != nil {
+				rollbackErr := tx.Rollback()
+				return fmt.Errorf("SQL stmt from counter metric: %w, started rollback %w",
+					err, rollbackErr)
+			}
+		}
+
+		if metric.Value != nil {
+			_, err = gaugesUpdateStmt.ExecContext(ctx, metric.ID, metric.Value)
+			if err != nil {
+				rollbackErr := tx.Rollback()
+				return fmt.Errorf("SQL stmt for gauge metric: %w, started rollback %w",
+					err, rollbackErr)
+			}
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to execute transaction commit %w", err)
 	}
 
 	return nil

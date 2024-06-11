@@ -37,6 +37,11 @@ func run(cfg *config.ServerConfig) error {
 		slog.Bool("ReStore", cfg.Envs.ReStore))
 
 	store, err := storage.NewStorage(cfg)
+
+	if err != nil {
+		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
+		return fmt.Errorf("failed to setup the memstore: %w", err)
+	}
 	defer func() {
 		if err := store.Close(); err != nil {
 			cfg.Log.ErrorContext(context.Background(),
@@ -45,10 +50,6 @@ func run(cfg *config.ServerConfig) error {
 		}
 	}()
 
-	if err != nil {
-		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
-		return fmt.Errorf("failed to setup the memstore: %w", err)
-	}
 	repos := repositories.NewRepository(store)
 	h := handlers.NewHandler(server.NewMetricsService(repos, cfg.Log), cfg.Log, cfg.DB)
 

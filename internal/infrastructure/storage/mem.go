@@ -35,6 +35,7 @@ type Storage interface {
 	GetRecord(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error)
 	GetAllRecords() (*MetricsStorage, error)
 	GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
+	StoreMetricsBatch(metrics []entities.Metrics) error
 	Close() error
 }
 
@@ -192,6 +193,22 @@ func (ms *MemStorage) GetAllRecordsByType(mType entities.MetricType) (map[entiti
 	return copyCounterMap, nil
 }
 
+func (ms *MemStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	for _, metric := range metrics {
+		switch entities.MetricType(metric.MType) {
+		case entities.GaugeMetricName:
+			ms.Gauge[entities.MetricName(metric.ID)] = entities.Gauge(*metric.Value)
+		case entities.CounterMetricName:
+			ms.Counter[entities.MetricName(metric.ID)] += entities.Counter(*metric.Delta)
+		}
+	}
+
+	return nil
+}
+
 func (ms *MemStorage) Close() error {
+
 	return nil
 }

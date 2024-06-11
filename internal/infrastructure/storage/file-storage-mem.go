@@ -154,3 +154,18 @@ func (fs *FileStorage) CreateRecord(metrics entities.Metrics) error {
 
 	return nil
 }
+
+func (fs *FileStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
+	if err := fs.MemStorage.StoreMetricsBatch(metrics); err != nil {
+		return fmt.Errorf("file batch store: %w", err)
+	}
+
+	if fs.cfg.Envs.StoreInterval == 0 {
+		err := fs.saveToFile()
+		if err != nil {
+			return fmt.Errorf("server service failed to save data to file %w", err)
+		}
+	}
+
+	return nil
+}

@@ -10,6 +10,7 @@ type MetricsRepository interface {
 	Get(key entities.MetricName, mType entities.MetricType) (entities.Metrics, error)
 	GetAll() (*storage.MetricsStorage, error)
 	GetAllByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
+	StoreMetricsBatch(metrics []entities.Metrics) error
 }
 
 type Repository struct {

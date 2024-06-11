@@ -77,6 +77,48 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Request) {
+	metrics := make([]entities.Metrics, 0)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		sh.logger.DebugContext(r.Context(), "failed to read request body")
+		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
+		return
+	}
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			sh.logger.ErrorContext(r.Context(),
+				"failed to close request body",
+				helpers.ErrAttr(err))
+		}
+	}()
+
+	err = json.Unmarshal(body, &metrics)
+	if err != nil {
+		sh.logger.DebugContext(r.Context(),
+			"failed to unmarshal the request",
+			slog.String("body", string(body)))
+		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
+		return
+	}
+
+	sh.logger.DebugContext(r.Context(),
+		fmt.Sprintf("received batch of %d metrics", len(metrics)))
+	// return http.StatusNotFound if metric type is not provided
+
+	w.Header().Set("Content-Type", "application/json")
+	err = sh.services.MetricsService.StoreMetricsBatch(metrics)
+	if err != nil {
+		sh.logger.ErrorContext(r.Context(),
+			"failed to batch write the metrics",
+			helpers.ErrAttr(err))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request) {
 	metric := entities.Metrics{}
 	body, err := io.ReadAll(r.Body)
