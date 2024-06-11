@@ -146,21 +146,32 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 	ctx := context.Background()
 	metricsMap := make(map[entities.MetricName]entities.Metrics)
 
+	selectCountersStmt := `SELECT name, value FROM counter_metrics`
+	selectGaugesStmt := `SELECT name, value FROM gauge_metrics`
+
+	var stmt string
+
+	switch mType {
+	case entities.GaugeMetricName:
+		stmt = selectGaugesStmt
+	case entities.CounterMetricName:
+		stmt = selectCountersStmt
+	default:
+		return nil, errors.New("invalid metric type")
+	}
+
+	rows, err := ds.db.QueryContext(ctx, stmt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all counter records by type: %w", err)
+	}
+	defer func() {
+		if err = rows.Close(); err != nil {
+			ds.cfg.Log.ErrorContext(ctx, "failed to close counter rows", helpers.ErrAttr(err))
+		}
+	}()
+
 	switch mType {
 	case entities.CounterMetricName:
-		rows, err := ds.db.QueryContext(ctx, `
-			SELECT name, value FROM counter_metrics
-		`)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get all counter records by type: %w", err)
-		}
-
-		defer func() {
-			if err := rows.Close(); err != nil {
-				ds.cfg.Log.ErrorContext(ctx, "failed to close counter rows", helpers.ErrAttr(err))
-			}
-		}()
-
 		for rows.Next() {
 			var name string
 			var delta int64
@@ -173,23 +184,7 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 				Delta: &delta,
 			}
 		}
-
-		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("reading counter db rows error %w", err)
-		}
 	case entities.GaugeMetricName:
-		rows, err := ds.db.QueryContext(ctx, `
-			SELECT name, value FROM gauge_metrics
-		`)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get all gauge records by type: %w", err)
-		}
-		defer func() {
-			if err := rows.Close(); err != nil {
-				ds.cfg.Log.ErrorContext(ctx, "failed to close gauge rows", helpers.ErrAttr(err))
-			}
-		}()
-
 		for rows.Next() {
 			var name string
 			var value float64
@@ -202,12 +197,10 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 				Value: &value,
 			}
 		}
+	}
 
-		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("reading gauge db rows error %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("invalid metric type: %s", mType)
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("reading counter db rows error %w", err)
 	}
 
 	return metricsMap, nil
@@ -349,13 +342,26 @@ func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Met
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err = tx.Rollback(); err != nil {
+			ds.cfg.Log.ErrorContext(ctx, "failed to rollback", helpers.ErrAttr(err))
+		}
+	}()
+
 	countersUpdateStmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO counter_metrics (name, value)
 		VALUES ($1, $2)
 		ON CONFLICT (name) DO UPDATE
 		SET value = excluded.value, updated_at = NOW();
 	`)
+	if err != nil {
+		return fmt.Errorf("batch store metrics: failed to create counter prepared statment: %w", err)
+	}
+	defer func() {
+		if err = countersUpdateStmt.Close(); err != nil {
+			ds.cfg.Log.ErrorContext(ctx, "failed to close counter prep statement", helpers.ErrAttr(err))
+		}
+	}()
 
 	gaugesUpdateStmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO gauge_metrics (name, value)
@@ -363,13 +369,21 @@ func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Met
 		ON CONFLICT (name) DO UPDATE
 		SET value = excluded.value, updated_at = NOW();
 	`)
+	if err != nil {
+		return fmt.Errorf("batch store metrics: failed to create gauge prepared statment: %w", err)
+	}
+	defer func() {
+		if err = gaugesUpdateStmt.Close(); err != nil {
+			ds.cfg.Log.ErrorContext(ctx, "failed to close gauge prep statement", helpers.ErrAttr(err))
+		}
+	}()
 
 	for _, metric := range metrics {
 		if metric.Delta != nil {
 			_, err = countersUpdateStmt.ExecContext(ctx, metric.ID, metric.Delta)
 			if err != nil {
 				rollbackErr := tx.Rollback()
-				return fmt.Errorf("SQL stmt from counter metric: %w, started rollback %w",
+				return fmt.Errorf("store counter SQL exec failed %w, started rollback %w",
 					err, rollbackErr)
 			}
 		}
@@ -378,7 +392,7 @@ func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Met
 			_, err = gaugesUpdateStmt.ExecContext(ctx, metric.ID, metric.Value)
 			if err != nil {
 				rollbackErr := tx.Rollback()
-				return fmt.Errorf("SQL stmt for gauge metric: %w, started rollback %w",
+				return fmt.Errorf("store gauge SQL exec failed %w, started rollback %w",
 					err, rollbackErr)
 			}
 		}

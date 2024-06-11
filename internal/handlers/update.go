@@ -13,6 +13,8 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
+const errorMessageFormat = "error reading body: %s"
+
 func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
@@ -82,7 +84,7 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		sh.logger.DebugContext(r.Context(), "failed to read request body")
-		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
 		return
 	}
 	defer func() {
@@ -97,8 +99,8 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		sh.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
-			slog.String("body", string(body)))
-		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
+			slog.String(bodyKey, string(body)))
+		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
 		return
 	}
 
@@ -124,7 +126,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		sh.logger.DebugContext(r.Context(), "failed to read request body")
-		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
 		return
 	}
 	defer func() {
@@ -139,8 +141,8 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		sh.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
-			slog.String("body", string(body)))
-		http.Error(w, fmt.Sprintf("error reading body: %s", err), http.StatusBadRequest)
+			slog.String(bodyKey, string(body)))
+		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
 		return
 	}
 
@@ -206,7 +208,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 		sh.logger.ErrorContext(r.Context(),
 			"failed to marshal the response",
 			helpers.ErrAttr(err),
-			slog.String("body", string(body)))
+			slog.String(bodyKey, string(body)))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

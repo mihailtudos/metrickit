@@ -3,6 +3,7 @@ package repositories
 import (
 	"errors"
 	"fmt"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
@@ -58,5 +59,9 @@ func (cmr *MetricsMemRepository) GetAllByType(mType entities.MetricType) (map[en
 }
 
 func (cmr *MetricsMemRepository) StoreMetricsBatch(metrics []entities.Metrics) error {
-	return cmr.store.StoreMetricsBatch(metrics)
+	if err := cmr.store.StoreMetricsBatch(metrics); err != nil {
+		return fmt.Errorf("mem storage error: %w", err)
+	}
+
+	return nil
 }

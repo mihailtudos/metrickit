@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
-	"log/slog"
 )
 
 type MetricsService struct {
@@ -62,5 +63,10 @@ func (ms *MetricsService) GetAllByType(mType entities.MetricType) (map[entities.
 }
 
 func (ms *MetricsService) StoreMetricsBatch(metrics []entities.Metrics) error {
-	return ms.repo.StoreMetricsBatch(metrics)
+	err := ms.repo.StoreMetricsBatch(metrics)
+	if err != nil {
+		return fmt.Errorf("metrics service %w", err)
+	}
+
+	return nil
 }

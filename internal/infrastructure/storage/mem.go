@@ -209,6 +209,5 @@ func (ms *MemStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
 }
 
 func (ms *MemStorage) Close() error {
-
 	return nil
 }

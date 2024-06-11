@@ -60,7 +60,7 @@ func (crw *compressResponseWriter) WriteHeader(code int) {
 }
 
 func (crw *compressResponseWriter) isCompressible() bool {
-	contentType := crw.Header().Get("Content-Type")
+	contentType := crw.Header().Get(contentType)
 	if strings.Contains(contentType, ";") {
 		contentType = strings.Split(contentType, ";")[0]
 	}

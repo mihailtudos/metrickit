@@ -21,6 +21,7 @@ import (
 var ErrUnknownMetric = errors.New("unknown metric type")
 
 const contentType = "Content-Type"
+const bodyKey = "body"
 
 func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFS(sh.TemplatesFs, "templates/index.html")
@@ -96,7 +97,9 @@ func (sh *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reque
 
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
-		sh.logger.ErrorContext(r.Context(), "failed to marshal request body: "+err.Error(), slog.String("body", string(body)))
+		sh.logger.ErrorContext(r.Context(),
+			"failed to marshal request body: "+err.Error(),
+			slog.String(bodyKey, string(body)))
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
