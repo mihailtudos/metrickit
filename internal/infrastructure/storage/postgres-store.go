@@ -223,9 +223,6 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 		}
 	}()
 
-	truncateGaugeTable := `TRUNCATE TABLE gauge_metrics;`
-	truncateCounterTable := `TRUNCATE TABLE counter_metrics;`
-
 	createGaugeTable := `
 		CREATE TABLE IF NOT EXISTS gauge_metrics (
 			id SERIAL PRIMARY KEY,
@@ -249,8 +246,6 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 	createStatements := []string{
 		createGaugeTable,
 		createCounterTable,
-		truncateCounterTable,
-		truncateGaugeTable,
 	}
 
 	for _, stmt := range createStatements {
