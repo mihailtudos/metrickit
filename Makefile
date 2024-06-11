@@ -106,7 +106,7 @@ autotest/run11: db/run
         -server-port=8080 \
         -source-path=.
 
-autotest/run11: db/run
+autotest/run12: db/run
 	 SERVER_PORT=8080 TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration12$$" \
 		-agent-binary-path=cmd/agent/agent \
 		-binary-path=cmd/server/server \
@@ -118,7 +118,8 @@ autotest/run11: db/run
 		autotest/run1, autotest/run2, autotest/run3, \
 		autotest/run4, autotest/run5, autotest/run6, \
 		autotest/run7, autotest/run8, autotest/run9, \
-		autotest/run10, db/run
+		autotest/run10, autotest/run11, autotest/run12, \
+		db/run
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 

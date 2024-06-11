@@ -311,14 +311,21 @@ func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
 			return fmt.Errorf("failed to get existing counter metrics: %w", err)
 		}
 
-		for i, metric := range metrics {
+		for _, metric := range counterMetrics {
 			v, ok := existingCounter[entities.MetricName(metric.ID)]
 			if ok {
 				*metric.Delta += *v.Delta
-				metrics[i] = metric
 			}
+
+			existingCounter[entities.MetricName(metric.ID)] = metric
 		}
-		if err := ds.storeBatchMetrics(ctx, counterMetrics); err != nil {
+
+		counterMetrics = counterMetrics[:0]
+		for _, v := range existingCounter {
+			counterMetrics = append(counterMetrics, v)
+		}
+
+		if err = ds.storeBatchMetrics(ctx, counterMetrics); err != nil {
 			return fmt.Errorf("store counter metrics failed %w", err)
 		}
 	}
