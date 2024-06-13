@@ -23,7 +23,9 @@ func main() {
 	}
 
 	if err = run(appConfig); err != nil {
-		appConfig.Log.ErrorContext(context.Background(), "failed to run the server: "+err.Error())
+		appConfig.Log.ErrorContext(context.Background(),
+			"failed to run the server",
+			helpers.ErrAttr(err))
 		log.Fatal(err)
 	}
 }
@@ -37,13 +39,13 @@ func run(cfg *config.ServerConfig) error {
 		slog.Bool("ReStore", cfg.Envs.ReStore))
 
 	store, err := storage.NewStorage(cfg)
-
+	ctx := context.Background()
 	if err != nil {
-		cfg.Log.ErrorContext(context.Background(), "failed to initialize the mem")
+		cfg.Log.ErrorContext(ctx, "failed to initialize the mem")
 		return fmt.Errorf("failed to setup the memstore: %w", err)
 	}
 	defer func() {
-		if err := store.Close(); err != nil {
+		if err := store.Close(ctx); err != nil {
 			cfg.Log.ErrorContext(context.Background(),
 				"failed to close the DB connection",
 				helpers.ErrAttr(err))

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"embed"
 	"log/slog"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 //go:embed templates
@@ -18,10 +18,10 @@ type ServerHandler struct {
 	services    *server.Service
 	logger      *slog.Logger
 	TemplatesFs embed.FS
-	db          *sql.DB
+	db          *pgxpool.Pool
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger, conn *sql.DB) *ServerHandler {
+func NewHandler(services *server.Service, logger *slog.Logger, conn *pgxpool.Pool) *ServerHandler {
 	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs, db: conn}
 }
 

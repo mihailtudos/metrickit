@@ -114,12 +114,20 @@ autotest/run12: db/run
         -server-port=8080 \
         -source-path=.
 
+autotest/run13: db/run
+	 SERVER_PORT=8080 TEMP_FILE=out.txt metricstest -test.v -test.run="^TestIteration13$$" \
+		-agent-binary-path=cmd/agent/agent \
+		-binary-path=cmd/server/server \
+		-database-dsn='postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable' \
+        -server-port=8080 \
+        -source-path=.
+
 .PHONY: run/server, run/agent, run/tests, show/cover, gci/report, \
 		autotest/run1, autotest/run2, autotest/run3, \
 		autotest/run4, autotest/run5, autotest/run6, \
 		autotest/run7, autotest/run8, autotest/run9, \
 		autotest/run10, autotest/run11, autotest/run12, \
-		db/run
+		autotest/run13, db/run
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 

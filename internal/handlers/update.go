@@ -13,7 +13,9 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
-const errorMessageFormat = "error reading body: %s"
+func formatBodyMessageErrors(err error) error {
+	return fmt.Errorf("error reading body: %w", err)
+}
 
 func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
@@ -84,7 +86,7 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		sh.logger.DebugContext(r.Context(), "failed to read request body")
-		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
+		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusInternalServerError)
 		return
 	}
 	defer func() {
@@ -100,7 +102,7 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 		sh.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
 			slog.String(bodyKey, string(body)))
-		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
+		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -126,7 +128,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		sh.logger.DebugContext(r.Context(), "failed to read request body")
-		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
+		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusBadRequest)
 		return
 	}
 	defer func() {
@@ -142,7 +144,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 		sh.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
 			slog.String(bodyKey, string(body)))
-		http.Error(w, fmt.Sprintf(errorMessageFormat, err), http.StatusBadRequest)
+		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusBadRequest)
 		return
 	}
 

@@ -36,7 +36,7 @@ type Storage interface {
 	GetAllRecords() (*MetricsStorage, error)
 	GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
 	StoreMetricsBatch(metrics []entities.Metrics) error
-	Close() error
+	Close(ctx context.Context) error
 }
 
 func NewStorage(cfg *config.ServerConfig) (Storage, error) {
@@ -208,6 +208,14 @@ func (ms *MemStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
 	return nil
 }
 
-func (ms *MemStorage) Close() error {
+func (ms *MemStorage) Close(ctx context.Context) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
+	ms.MetricsStorage = MetricsStorage{
+		Counter: make(map[entities.MetricName]entities.Counter),
+		Gauge:   make(map[entities.MetricName]entities.Gauge),
+	}
+
 	return nil
 }

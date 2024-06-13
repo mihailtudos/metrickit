@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"testing"
 
@@ -12,14 +13,14 @@ import (
 func TestCounterService(t *testing.T) {
 	cfg, err := config.NewServerConfig()
 	if err != nil {
-		log.Fatal("failed to get configs: " + err.Error())
+		log.Fatal("failed to get configs: ", err.Error())
 	}
-
+	ctx := context.Background()
 	store, err := storage.NewStorage(cfg)
 	if err != nil {
 		log.Fatal("failed to initiate storage: " + err.Error())
 	}
-	_ = store.Close()
+	_ = store.Close(ctx)
 	tests := []struct {
 		name  string
 		err   error

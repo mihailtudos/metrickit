@@ -13,6 +13,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/pkg/compressor"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 type MetricsCollectionService struct {
@@ -40,6 +41,7 @@ func (m *MetricsCollectionService) Collect() error {
 
 func (m *MetricsCollectionService) Send(serverAddr string) error {
 	url := fmt.Sprintf("http://%s/updates/", serverAddr)
+	ctx := context.Background()
 
 	metrics, err := m.mRepo.GetAll()
 	if err != nil {
@@ -48,7 +50,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 
 	allMetrics := make([]entities.Metrics, 0, len(metrics.CounterMetrics)+len(metrics.CounterMetrics))
 
-	m.logger.DebugContext(context.Background(), "publishing counter metrics")
+	m.logger.DebugContext(ctx, "publishing counter metrics")
 	for k, v := range metrics.CounterMetrics {
 		val := int64(v)
 		metric := entities.Metrics{
@@ -59,7 +61,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 		allMetrics = append(allMetrics, metric)
 	}
 
-	m.logger.DebugContext(context.Background(), "publishing gauge metrics")
+	m.logger.DebugContext(ctx, "publishing gauge metrics")
 	for k, v := range metrics.GaugeMetrics {
 		val := float64(v)
 		metric := entities.Metrics{
@@ -70,10 +72,11 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 		allMetrics = append(allMetrics, metric)
 	}
 
-	err = m.publishMetric(url, "application/json", allMetrics)
+	err = m.publishMetric(ctx, url, "application/json", allMetrics)
 	if err != nil {
-		m.logger.DebugContext(context.Background(),
-			"publishing the counter metrics failed: "+err.Error())
+		m.logger.ErrorContext(ctx,
+			"publishing the counter metrics failed: ",
+			helpers.ErrAttr(err))
 	}
 
 	return nil
@@ -81,7 +84,8 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 
 var ErrJSONMarshal = errors.New("failed to marshal to JSON")
 
-func (m *MetricsCollectionService) publishMetric(url, contentType string, metrics []entities.Metrics) error {
+func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
+	contentType string, metrics []entities.Metrics) error {
 	mJSONStruct, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("failed serialize the metrics: %w", ErrJSONMarshal)
@@ -89,12 +93,12 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 
 	gzipBuffer, err := compressor.Compress(mJSONStruct)
 	if err != nil {
-		return errors.New("failed to compress metrics: " + err.Error())
+		return fmt.Errorf("failed to compress metrics: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(gzipBuffer))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(gzipBuffer))
 	if err != nil {
-		return errors.New("failed to create HTTP request: " + err.Error())
+		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Content-Encoding", "gzip")
@@ -102,12 +106,12 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return errors.New("failed to post metric" + err.Error())
+		return fmt.Errorf("failed to post metric: %w", err)
 	}
 
 	defer func() {
 		if err := res.Body.Close(); err != nil {
-			m.logger.ErrorContext(context.Background(), "failed to close the body")
+			m.logger.ErrorContext(ctx, "failed to close the body")
 		}
 	}()
 
@@ -115,6 +119,6 @@ func (m *MetricsCollectionService) publishMetric(url, contentType string, metric
 		return errors.New("failed to publish the metric " + res.Status)
 	}
 
-	m.logger.DebugContext(context.Background(), "published successfully", slog.String("metric", string(mJSONStruct)))
+	m.logger.DebugContext(ctx, "published successfully", slog.String("metric", string(mJSONStruct)))
 	return nil
 }

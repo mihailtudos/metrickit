@@ -5,14 +5,18 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DBStore struct {
-	db  *sql.DB
+	db  *pgxpool.Pool
 	cfg *config.ServerConfig
 }
 
@@ -37,9 +41,11 @@ func (ds *DBStore) CreateRecord(metric entities.Metrics) error {
 	case metric.Delta != nil:
 		err = ds.createCounterMetric(ctx, metric)
 	case metric.Value != nil:
-		_, err = ds.db.ExecContext(ctx, `
-			INSERT INTO gauge_metrics (name, value) VALUES ($1, $2)
-			ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value
+		_, err = ds.db.Exec(ctx, `
+			INSERT INTO gauge_metrics (name, value) 
+			VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE 
+			    SET value = EXCLUDED.value
 		`, metric.ID, *metric.Value)
 	default:
 		return errors.New("invalid metric: must have either delta or value set")
@@ -59,12 +65,12 @@ func (ds *DBStore) GetRecord(mName entities.MetricName, mType entities.MetricTyp
 	ctx := context.Background()
 	switch mType {
 	case "counter":
-		err = ds.db.QueryRowContext(ctx, `
+		err = ds.db.QueryRow(ctx, `
 			SELECT name, value FROM counter_metrics WHERE name = $1
 		`, mName).Scan(&metrics.ID, &metrics.Delta)
 		metrics.MType = "counter"
 	case "gauge":
-		err = ds.db.QueryRowContext(ctx, `
+		err = ds.db.QueryRow(ctx, `
 			SELECT name, value FROM gauge_metrics WHERE name = $1
 		`, mName).Scan(&metrics.ID, &metrics.Value)
 		metrics.MType = "gauge"
@@ -73,7 +79,7 @@ func (ds *DBStore) GetRecord(mName entities.MetricName, mType entities.MetricTyp
 	}
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return metrics, fmt.Errorf("metric not found: %w", ErrNotFound)
 		}
 		return metrics, fmt.Errorf("failed to get record: %w", err)
@@ -89,17 +95,14 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 		Gauge:   make(map[entities.MetricName]entities.Gauge),
 	}
 
-	rows, err := ds.db.QueryContext(ctx, `
+	rows, err := ds.db.Query(ctx, `
 		SELECT name, value FROM gauge_metrics
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all gauge records: %w", err)
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			ds.cfg.Log.ErrorContext(ctx, "failed to close gauge rows", helpers.ErrAttr(err))
-		}
-	}()
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var name string
@@ -114,17 +117,13 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 		return nil, fmt.Errorf("reading gauge db row error %w", err)
 	}
 
-	rows, err = ds.db.QueryContext(ctx, `
+	rows, err = ds.db.Query(ctx, `
 		SELECT name, value FROM counter_metrics
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all counter records: %w", err)
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			ds.cfg.Log.ErrorContext(ctx, "failed to close counter rows", helpers.ErrAttr(err))
-		}
-	}()
+	defer rows.Close()
 
 	for rows.Next() {
 		var name string
@@ -160,15 +159,11 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 		return nil, errors.New("invalid metric type")
 	}
 
-	rows, err := ds.db.QueryContext(ctx, stmt)
+	rows, err := ds.db.Query(ctx, stmt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all counter records by type: %w", err)
 	}
-	defer func() {
-		if err = rows.Close(); err != nil {
-			ds.cfg.Log.ErrorContext(ctx, "failed to close counter rows", helpers.ErrAttr(err))
-		}
-	}()
+	defer rows.Close()
 
 	switch mType {
 	case entities.CounterMetricName:
@@ -206,19 +201,25 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 	return metricsMap, nil
 }
 
-func (ds *DBStore) Close() error {
-	return fmt.Errorf("failed to close connection %w", ds.db.Close())
+func (ds *DBStore) Close(ctx context.Context) error {
+	ds.cfg.Log.DebugContext(ctx,
+		"shutting down the db connection pool")
+	ds.db.Close()
+	return nil
 }
 
 func (ds *DBStore) createScheme(ctx context.Context) error {
-	trx, err := ds.db.BeginTx(ctx, nil)
+	trx, err := ds.db.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to start a transaction %w", err)
+		return fmt.Errorf("failed to start the transaction %w", err)
 	}
+
 	defer func() {
-		if err := trx.Rollback(); err != nil {
+		if err = trx.Rollback(ctx); err != nil {
 			if errors.Is(err, sql.ErrTxDone) {
-				ds.cfg.Log.DebugContext(ctx, "failed to rollback the transaction ", helpers.ErrAttr(err))
+				ds.cfg.Log.ErrorContext(ctx,
+					"failed to rollback the transaction ",
+					helpers.ErrAttr(err))
 			}
 		}
 	}()
@@ -249,12 +250,12 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 	}
 
 	for _, stmt := range createStatements {
-		if _, err := trx.ExecContext(ctx, stmt); err != nil {
+		if _, err := trx.Exec(ctx, stmt); err != nil {
 			return fmt.Errorf("failed to execute transaction %w", err)
 		}
 	}
 
-	if err := trx.Commit(); err != nil {
+	if err := trx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit the transaction %w", err)
 	}
 
@@ -268,9 +269,11 @@ func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metr
 	}
 
 	if errors.Is(err, ErrNotFound) {
-		_, err = ds.db.ExecContext(ctx, `
-			INSERT INTO counter_metrics (name, value) VALUES ($1, $2)
-			ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value
+		_, err = ds.db.Exec(ctx, `
+			INSERT INTO counter_metrics (name, value) 
+			VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE 
+			    SET value = EXCLUDED.value
 		`, metric.ID, *metric.Delta)
 		if err != nil {
 			return fmt.Errorf("failed to create new counter metric: %w", err)
@@ -278,7 +281,7 @@ func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metr
 	} else {
 		newValue := *metric.Delta + *existingMetric.Delta
 		metric.Delta = &newValue
-		_, err = ds.db.ExecContext(ctx, `
+		_, err = ds.db.Exec(ctx, `
 			INSERT INTO counter_metrics (name, value) VALUES ($1, $2)
 			ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value
 		`, metric.ID, *metric.Delta)
@@ -340,67 +343,71 @@ func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
 }
 
 func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Metrics) error {
-	tx, err := ds.db.BeginTx(context.Background(), nil)
+	tx, err := ds.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction %w", err)
 	}
 	defer func() {
-		if err = tx.Rollback(); err != nil {
+		if err := tx.Rollback(ctx); err != nil {
 			ds.cfg.Log.ErrorContext(ctx, "failed to rollback", helpers.ErrAttr(err))
 		}
 	}()
 
-	countersUpdateStmt, err := tx.PrepareContext(ctx, `
+	// Counters update statement
+	countersUpdateStmt := `
 		INSERT INTO counter_metrics (name, value)
-		VALUES ($1, $2)
+		VALUES %s
 		ON CONFLICT (name) DO UPDATE
 		SET value = excluded.value, updated_at = NOW();
-	`)
-	if err != nil {
-		return fmt.Errorf("batch store metrics: failed to create counter prepared statment: %w", err)
-	}
-	defer func() {
-		if err = countersUpdateStmt.Close(); err != nil {
-			ds.cfg.Log.ErrorContext(ctx, "failed to close counter prep statement", helpers.ErrAttr(err))
-		}
-	}()
+	`
 
-	gaugesUpdateStmt, err := tx.PrepareContext(ctx, `
+	// Gauges update statement
+	gaugesUpdateStmt := `
 		INSERT INTO gauge_metrics (name, value)
-		VALUES ($1, $2)
+		VALUES %s
 		ON CONFLICT (name) DO UPDATE
 		SET value = excluded.value, updated_at = NOW();
-	`)
-	if err != nil {
-		return fmt.Errorf("batch store metrics: failed to create gauge prepared statment: %w", err)
-	}
-	defer func() {
-		if err = gaugesUpdateStmt.Close(); err != nil {
-			ds.cfg.Log.ErrorContext(ctx, "failed to close gauge prep statement", helpers.ErrAttr(err))
-		}
-	}()
+	`
 
-	for _, metric := range metrics {
+	var counterValues []string
+	var counterParams []interface{}
+	var gaugeValues []string
+	var gaugeParams []interface{}
+	const metricsTypesCount = 2
+	const firstParam = 1
+	const secondParam = 2
+
+	for i, metric := range metrics {
 		if metric.Delta != nil {
-			_, err = countersUpdateStmt.ExecContext(ctx, metric.ID, metric.Delta)
-			if err != nil {
-				rollbackErr := tx.Rollback()
-				return fmt.Errorf("store counter SQL exec failed %w, started rollback %w",
-					err, rollbackErr)
-			}
+			counterValues = append(counterValues, fmt.Sprintf("($%d, $%d)",
+				metricsTypesCount*i+firstParam, metricsTypesCount*i+secondParam))
+			counterParams = append(counterParams, metric.ID, *metric.Delta)
 		}
 
 		if metric.Value != nil {
-			_, err = gaugesUpdateStmt.ExecContext(ctx, metric.ID, metric.Value)
-			if err != nil {
-				rollbackErr := tx.Rollback()
-				return fmt.Errorf("store gauge SQL exec failed %w, started rollback %w",
-					err, rollbackErr)
-			}
+			gaugeValues = append(gaugeValues, fmt.Sprintf("($%d, $%d)",
+				metricsTypesCount*i+firstParam, metricsTypesCount*i+secondParam))
+			gaugeParams = append(gaugeParams, metric.ID, *metric.Value)
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
+	if len(counterValues) > 0 {
+		_, err = ds.db.Exec(ctx, fmt.Sprintf(countersUpdateStmt, strings.Join(counterValues, ",")), counterParams...)
+		if err != nil {
+			rollbackErr := tx.Rollback(ctx)
+			return fmt.Errorf("store counter SQL exec failed %w, started rollback %w", err, rollbackErr)
+		}
+	}
+
+	if len(gaugeValues) > 0 {
+		_, err = ds.db.Exec(ctx, fmt.Sprintf(gaugesUpdateStmt, strings.Join(gaugeValues, ",")), gaugeParams...)
+		if err != nil {
+			rollbackErr := tx.Rollback(ctx)
+			return fmt.Errorf("store gauge SQL exec failed %w, started rollback %w", err, rollbackErr)
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to execute transaction commit %w", err)
 	}
 

@@ -69,7 +69,7 @@ func (fs *FileStorage) periodicSave() {
 	}
 }
 
-func (fs *FileStorage) Close() error {
+func (fs *FileStorage) Close(ctx context.Context) error {
 	close(fs.stopSaveChan)
 	err := fs.saveToFile()
 	if err != nil {
