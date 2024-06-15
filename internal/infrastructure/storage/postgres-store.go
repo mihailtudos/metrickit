@@ -294,15 +294,20 @@ func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metr
 }
 
 func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
-	counterMetrics := make([]entities.Metrics, 0)
-	gaugeMetrics := make([]entities.Metrics, 0)
+	counterMetrics := make(map[string]entities.Metrics)
+	gaugeMetrics := make(map[string]entities.Metrics)
 
 	for _, metric := range metrics {
 		switch entities.MetricType(metric.MType) {
 		case entities.CounterMetricName:
-			counterMetrics = append(counterMetrics, metric)
+			if existing, ok := counterMetrics[metric.ID]; ok {
+				*existing.Delta += *metric.Delta
+				counterMetrics[metric.ID] = existing
+			} else {
+				counterMetrics[metric.ID] = metric
+			}
 		case entities.GaugeMetricName:
-			gaugeMetrics = append(gaugeMetrics, metric)
+			gaugeMetrics[metric.ID] = metric // only the latest gauge value is relevant
 		}
 	}
 
@@ -314,27 +319,30 @@ func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
 			return fmt.Errorf("failed to get existing counter metrics: %w", err)
 		}
 
-		for _, metric := range counterMetrics {
-			v, ok := existingCounter[entities.MetricName(metric.ID)]
-			if ok {
+		for id, metric := range counterMetrics {
+			if v, ok := existingCounter[entities.MetricName(id)]; ok {
 				*metric.Delta += *v.Delta
 			}
-
-			existingCounter[entities.MetricName(metric.ID)] = metric
+			existingCounter[entities.MetricName(id)] = metric
 		}
 
-		counterMetrics = counterMetrics[:0]
+		counterMetricsList := make([]entities.Metrics, 0, len(existingCounter))
 		for _, v := range existingCounter {
-			counterMetrics = append(counterMetrics, v)
+			counterMetricsList = append(counterMetricsList, v)
 		}
 
-		if err = ds.storeBatchMetrics(ctx, counterMetrics); err != nil {
+		if err = ds.storeBatchMetrics(ctx, counterMetricsList); err != nil {
 			return fmt.Errorf("store counter metrics failed %w", err)
 		}
 	}
 
 	if len(gaugeMetrics) > 0 {
-		if err := ds.storeBatchMetrics(ctx, gaugeMetrics); err != nil {
+		gaugeMetricsList := make([]entities.Metrics, 0, len(gaugeMetrics))
+		for _, v := range gaugeMetrics {
+			gaugeMetricsList = append(gaugeMetricsList, v)
+		}
+
+		if err := ds.storeBatchMetrics(ctx, gaugeMetricsList); err != nil {
 			return fmt.Errorf("store gauge metrics failed %w", err)
 		}
 	}
