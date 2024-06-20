@@ -1,14 +1,10 @@
 package config
 
 import (
-	"context"
 	"flag"
 	"fmt"
-	"log/slog"
-	"os"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const defaultPort = 8080
@@ -53,37 +49,19 @@ func parseServerEnvs() (*serverEnvs, error) {
 }
 
 type ServerConfig struct {
-	Log             *slog.Logger
 	Envs            *serverEnvs
-	DB              *pgxpool.Pool
 	ShutdownTimeout int
 }
 
 func NewServerConfig() (*ServerConfig, error) {
-	logger := NewLogger(os.Stdout, defaultLogLevel)
-	ctx := context.Background()
-
 	envs, err := parseServerEnvs()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the config %w", err)
 	}
 
-	if envs.LogLevel != defaultLogLevel {
-		logger = NewLogger(os.Stdout, envs.LogLevel)
-	}
-
 	cfg := &ServerConfig{
-		Log:             logger,
 		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
-	}
-
-	if cfg.Envs.D3SN != "" {
-		db, err := cfg.InitPostgresDB(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("DB DSN present but failed to initiatie connection: %w", err)
-		}
-		cfg.DB = db
 	}
 
 	return cfg, nil

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mihailtudos/metrickit/pkg/compressor"
+	"github.com/mihailtudos/metrickit/internal/compressor"
 )
 
 var compressibleContentTypes = map[string]struct{}{
@@ -79,7 +79,8 @@ func (sh *ServerHandler) WithCompressedResponse(next http.Handler) http.Handler 
 				return
 			}
 
-			decompressedBody, err := compressor.Decompress(body)
+			c := compressor.NewCompressor(sh.logger)
+			decompressedBody, err := c.Decompress(body)
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return

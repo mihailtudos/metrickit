@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/mihailtudos/metrickit/internal/compressor"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
-	"github.com/mihailtudos/metrickit/pkg/compressor"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
@@ -77,6 +77,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 		m.logger.ErrorContext(ctx,
 			"publishing the counter metrics failed: ",
 			helpers.ErrAttr(err))
+		return fmt.Errorf("sent metrics %w", err)
 	}
 
 	return nil
@@ -91,7 +92,9 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 		return fmt.Errorf("failed serialize the metrics: %w", ErrJSONMarshal)
 	}
 
-	gzipBuffer, err := compressor.Compress(mJSONStruct)
+	c := compressor.NewCompressor(m.logger)
+
+	gzipBuffer, err := c.Compress(mJSONStruct)
 	if err != nil {
 		return fmt.Errorf("failed to compress metrics: %w", err)
 	}

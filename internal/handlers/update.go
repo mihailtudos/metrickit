@@ -173,7 +173,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 
 	switch entities.MetricType(metric.MType) {
 	case entities.CounterMetricName:
-		if err := sh.services.MetricsService.Create(metric); err != nil {
+		if err = sh.services.MetricsService.Create(metric); err != nil {
 			sh.logger.ErrorContext(r.Context(),
 				"failed to crete the counter metric",
 				helpers.ErrAttr(err),

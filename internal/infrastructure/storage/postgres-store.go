@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
-	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
@@ -16,14 +16,14 @@ import (
 )
 
 type DBStore struct {
-	db  *pgxpool.Pool
-	cfg *config.ServerConfig
+	db     *pgxpool.Pool
+	logger *slog.Logger
 }
 
-func NewPostgresStorage(cfg *config.ServerConfig) (*DBStore, error) {
+func NewPostgresStorage(db *pgxpool.Pool, logger *slog.Logger) (*DBStore, error) {
 	dbs := &DBStore{
-		db:  cfg.DB,
-		cfg: cfg,
+		db:     db,
+		logger: logger,
 	}
 
 	if err := dbs.createScheme(context.Background()); err != nil {
@@ -202,7 +202,7 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 }
 
 func (ds *DBStore) Close(ctx context.Context) error {
-	ds.cfg.Log.DebugContext(ctx,
+	ds.logger.DebugContext(ctx,
 		"shutting down the db connection pool")
 	ds.db.Close()
 	return nil
@@ -217,7 +217,7 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 	defer func() {
 		if err = trx.Rollback(ctx); err != nil {
 			if errors.Is(err, sql.ErrTxDone) {
-				ds.cfg.Log.ErrorContext(ctx,
+				ds.logger.ErrorContext(ctx,
 					"failed to rollback the transaction ",
 					helpers.ErrAttr(err))
 			}
@@ -357,7 +357,7 @@ func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Met
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
-			ds.cfg.Log.ErrorContext(ctx, "failed to rollback", helpers.ErrAttr(err))
+			ds.logger.ErrorContext(ctx, "failed to rollback", helpers.ErrAttr(err))
 		}
 	}()
 

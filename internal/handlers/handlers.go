@@ -22,7 +22,11 @@ type ServerHandler struct {
 }
 
 func NewHandler(services *server.Service, logger *slog.Logger, conn *pgxpool.Pool) *ServerHandler {
-	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs, db: conn}
+	return &ServerHandler{
+		services:    services,
+		logger:      logger,
+		TemplatesFs: templatesFs,
+		db:          conn}
 }
 
 func (sh *ServerHandler) InitHandlers() http.Handler {
