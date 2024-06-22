@@ -26,7 +26,7 @@ func main() {
 
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
-	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log)
+	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log, &agentCfg.Key)
 
 	pollTicker := time.NewTicker(agentCfg.PollInterval)
 	defer pollTicker.Stop()

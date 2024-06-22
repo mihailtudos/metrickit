@@ -18,6 +18,7 @@ const defaultPoolInterval = 2
 type AgentEnvs struct {
 	Log            *slog.Logger
 	ServerAddr     string
+	Key            string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 }
@@ -25,6 +26,7 @@ type AgentEnvs struct {
 type envAgentConfig struct {
 	ServerAddr     string `env:"ADDRESS"`
 	LogLevel       string `env:"LOG_LEVEL"`
+	Key            string `env:"KEY"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 }
@@ -45,6 +47,7 @@ func NewAgentConfig() (*AgentEnvs, error) {
 		ServerAddr:     envs.ServerAddr,
 		PollInterval:   time.Duration(envs.PollInterval) * time.Second,
 		ReportInterval: time.Duration(envs.ReportInterval) * time.Second,
+		Key:            envs.Key,
 	}, nil
 }
 
@@ -60,6 +63,8 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 		"log level")
 	flag.StringVar(&envConfig.ServerAddr, "a", envConfig.ServerAddr,
 		"server address - usage: ADDRESS:PORT")
+	flag.StringVar(&envConfig.Key, "k", envConfig.Key,
+		"sets the secret key used for signing data")
 	flag.IntVar(&envConfig.PollInterval, "p", envConfig.PollInterval,
 		"sets the frequency of polling the metrics in seconds")
 	flag.IntVar(&envConfig.ReportInterval, "r", envConfig.ReportInterval,

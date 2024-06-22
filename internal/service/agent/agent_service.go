@@ -15,8 +15,10 @@ type AgentService struct {
 	MetricsService MetricsService
 }
 
-func NewAgentService(repository *repositories.AgentRepository, logger *slog.Logger) *AgentService {
+func NewAgentService(repository *repositories.AgentRepository,
+	logger *slog.Logger,
+	secret *string) *AgentService {
 	return &AgentService{
-		MetricsService: NewMetricsCollectionService(repository, logger),
+		MetricsService: NewMetricsCollectionService(repository, logger, secret),
 	}
 }
