@@ -86,7 +86,7 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	h := handlers.NewHandler(service, app.logger, app.db, &app.cfg.Envs.Key)
+	h := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
 
 	app.logger.DebugContext(context.Background(), "running server 🔥",
 		slog.String("address", app.cfg.Envs.Address))

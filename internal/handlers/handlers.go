@@ -19,11 +19,11 @@ type ServerHandler struct {
 	logger      *slog.Logger
 	TemplatesFs embed.FS
 	db          *pgxpool.Pool
-	secret      *string
+	secret      string
 }
 
 func NewHandler(services *server.Service, logger *slog.Logger,
-	conn *pgxpool.Pool, secret *string) *ServerHandler {
+	conn *pgxpool.Pool, secret string) *ServerHandler {
 	return &ServerHandler{
 		services:    services,
 		logger:      logger,
