@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -65,7 +64,8 @@ func (app *ServerApp) run(ctx context.Context) error {
 		slog.String("StorePath", app.cfg.Envs.StorePath),
 		slog.String("LogLevel", app.cfg.Envs.LogLevel),
 		slog.Int("StoreInterval", app.cfg.Envs.StoreInterval),
-		slog.Bool("ReStore", app.cfg.Envs.ReStore))
+		slog.Bool("ReStore", app.cfg.Envs.ReStore),
+		slog.Bool("Secret", app.cfg.Envs.Key != ""))
 
 	store, err := storage.NewStorage(app.db,
 		app.logger,
@@ -86,15 +86,16 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	h := handlers.NewHandler(service, app.logger, app.db)
+	h := handlers.NewHandler(service, app.logger, app.db, &app.cfg.Envs.Key)
 
-	app.logger.DebugContext(context.Background(), "running server 🔥", slog.String("address", app.cfg.Envs.Address))
+	app.logger.DebugContext(context.Background(), "running server 🔥",
+		slog.String("address", app.cfg.Envs.Address))
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
 		Handler: h.InitHandlers(),
 	}
 
-	if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err = srv.ListenAndServe(); err != nil {
 		return fmt.Errorf("failed to start the server: %w", err)
 	}
 

@@ -3,6 +3,9 @@ package agent
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,11 +22,13 @@ import (
 type MetricsCollectionService struct {
 	mRepo  repositories.MetricsCollectionRepository
 	logger *slog.Logger
+	secret *string
 }
 
 func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
-	logger *slog.Logger) *MetricsCollectionService {
-	return &MetricsCollectionService{mRepo: repo, logger: logger}
+	logger *slog.Logger,
+	secret *string) *MetricsCollectionService {
+	return &MetricsCollectionService{mRepo: repo, logger: logger, secret: secret}
 }
 
 func (m *MetricsCollectionService) Collect() error {
@@ -105,6 +110,16 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Content-Encoding", "gzip")
+
+	if m.secret != nil {
+		hash := hmac.New(sha256.New, []byte(*m.secret))
+		hash.Write(mJSONStruct)
+		hashedStr := hex.EncodeToString(hash.Sum(nil))
+
+		req.Header.Set("HashSHA256", hashedStr)
+		m.logger.DebugContext(ctx,
+			"request body signed successfully")
+	}
 
 	client := &http.Client{}
 	res, err := client.Do(req)

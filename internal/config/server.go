@@ -19,6 +19,7 @@ type serverEnvs struct {
 	LogLevel      string `env:"LOG_LEVEL"`
 	StorePath     string `env:"FILE_STORAGE_PATH"`
 	D3SN          string `env:"DATABASE_DSN"`
+	Key           string `env:"KEY"`
 	StoreInterval int    `env:"STORE_INTERVAL"`
 	ReStore       bool   `env:"RESTORE"`
 }
@@ -38,6 +39,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.StringVar(&envConfig.StorePath, "f", envConfig.StorePath, "metrics store file path")
 	flag.BoolVar(&envConfig.ReStore, "r", envConfig.ReStore, "metrics re-store option")
 	flag.StringVar(&envConfig.D3SN, "d", "", "DB connection string")
+	flag.StringVar(&envConfig.Key, "k", "", "data signing secret key")
 
 	flag.Parse()
 

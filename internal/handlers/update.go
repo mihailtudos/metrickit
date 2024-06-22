@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -96,6 +99,17 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 				helpers.ErrAttr(err))
 		}
 	}()
+
+	if sh.secret != nil {
+		if !sh.isBodyValid(body, r.Header.Get("HashSHA256")) {
+			sh.logger.DebugContext(r.Context(),
+				"request body failed integrity check")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		sh.logger.DebugContext(r.Context(),
+			"request body passed integrity check")
+	}
 
 	err = json.Unmarshal(body, &metrics)
 	if err != nil {
@@ -252,4 +266,16 @@ func (sh *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.M
 
 		return &currentDelta, nil
 	}
+}
+
+func (sh *ServerHandler) isBodyValid(data []byte, reqHash string) bool {
+	if reqHash == "" {
+		return false
+	}
+
+	hash := hmac.New(sha256.New, []byte(*sh.secret))
+	hash.Write(data)
+	hashedStr := hex.EncodeToString(hash.Sum(nil))
+
+	return hashedStr == reqHash
 }
