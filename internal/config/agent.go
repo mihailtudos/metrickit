@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/mihailtudos/metrickit/internal/logger"
+
 	"github.com/caarlos0/env/v11"
 )
 
@@ -22,20 +24,24 @@ type AgentEnvs struct {
 
 type envAgentConfig struct {
 	ServerAddr     string `env:"ADDRESS"`
+	LogLevel       string `env:"LOG_LEVEL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 }
 
 func NewAgentConfig() (*AgentEnvs, error) {
-	logger := NewLogger(os.Stdout, defaultLogLevel)
-
 	envs, err := parseAgentEnvs()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent config: %w", err)
 	}
 
+	l, err := logger.NewLogger(os.Stdout, envs.LogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("agent logger: %w", err)
+	}
+
 	return &AgentEnvs{
-		Log:            logger,
+		Log:            l,
 		ServerAddr:     envs.ServerAddr,
 		PollInterval:   time.Duration(envs.PollInterval) * time.Second,
 		ReportInterval: time.Duration(envs.ReportInterval) * time.Second,
@@ -44,11 +50,14 @@ func NewAgentConfig() (*AgentEnvs, error) {
 
 func parseAgentEnvs() (*envAgentConfig, error) {
 	envConfig := &envAgentConfig{
+		LogLevel:       defaultLogLevel,
 		PollInterval:   defaultPoolInterval,
 		ReportInterval: defaultReportInterval,
 		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
 	}
 
+	flag.StringVar(&envConfig.LogLevel, "l", envConfig.LogLevel,
+		"log level")
 	flag.StringVar(&envConfig.ServerAddr, "a", envConfig.ServerAddr,
 		"server address - usage: ADDRESS:PORT")
 	flag.IntVar(&envConfig.PollInterval, "p", envConfig.PollInterval,

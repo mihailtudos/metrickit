@@ -3,10 +3,24 @@ package compressor
 import (
 	"bytes"
 	"compress/flate"
+	"context"
 	"fmt"
+	"log/slog"
+
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
-func Compress(data []byte) ([]byte, error) {
+type Compressor struct {
+	logger *slog.Logger
+}
+
+func NewCompressor(logger *slog.Logger) Compressor {
+	return Compressor{
+		logger: logger,
+	}
+}
+
+func (c *Compressor) Compress(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	w, err := flate.NewWriter(&b, flate.BestSpeed)
 	if err != nil {
@@ -26,11 +40,14 @@ func Compress(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func Decompress(data []byte) ([]byte, error) {
+func (c *Compressor) Decompress(data []byte) ([]byte, error) {
 	r := flate.NewReader(bytes.NewReader(data))
 	defer func() {
 		if err := r.Close(); err != nil {
-			fmt.Println("failed to close the reader")
+			c.logger.ErrorContext(
+				context.Background(),
+				"failed to close the reader",
+				helpers.ErrAttr(err))
 		}
 	}()
 

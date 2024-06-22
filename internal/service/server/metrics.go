@@ -47,7 +47,7 @@ func (ms *MetricsService) Get(key entities.MetricName,
 func (ms *MetricsService) GetAll() (*storage.MetricsStorage, error) {
 	items, err := ms.repo.GetAll()
 	if err != nil {
-		return nil, errors.New("failed to get the counter metrics: " + err.Error())
+		return nil, fmt.Errorf("failed to get the counter metrics: %w", err)
 	}
 
 	return items, nil
@@ -60,4 +60,13 @@ func (ms *MetricsService) GetAllByType(mType entities.MetricType) (map[entities.
 	}
 
 	return metrics, nil
+}
+
+func (ms *MetricsService) StoreMetricsBatch(metrics []entities.Metrics) error {
+	err := ms.repo.StoreMetricsBatch(metrics)
+	if err != nil {
+		return fmt.Errorf("metrics service %w", err)
+	}
+
+	return nil
 }

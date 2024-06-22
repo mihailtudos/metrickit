@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
@@ -17,27 +17,31 @@ var ownerFilePerm os.FileMode = 0o600
 type FileStorage struct {
 	stopSaveChan chan struct{}
 	file         *os.File
+	logger       *slog.Logger
 	MemStorage
+	storeInterval int
 }
 
-func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
-	file, err := os.OpenFile(cfg.Envs.StorePath, os.O_RDWR|os.O_CREATE, ownerFilePerm)
+func NewFileStorage(logger *slog.Logger, storeInterval int, storePath string) (*FileStorage, error) {
+	file, err := os.OpenFile(storePath, os.O_RDWR|os.O_CREATE, ownerFilePerm)
 	if err != nil {
 		return nil, fmt.Errorf("store failed to open file: %w", err)
 	}
-	cfg.Log.DebugContext(context.Background(), "created file storage")
+	logger.DebugContext(context.Background(), "created file storage")
 
 	fs := &FileStorage{
+		logger: logger,
 		MemStorage: MemStorage{
-			mu:  sync.Mutex{},
-			cfg: cfg,
+			mu: sync.Mutex{},
 			MetricsStorage: MetricsStorage{
 				Counter: make(map[entities.MetricName]entities.Counter),
 				Gauge:   make(map[entities.MetricName]entities.Gauge),
 			},
+			logger: logger,
 		},
-		stopSaveChan: make(chan struct{}),
-		file:         file,
+		stopSaveChan:  make(chan struct{}),
+		file:          file,
+		storeInterval: storeInterval,
 	}
 
 	err = fs.loadFromFile()
@@ -45,7 +49,7 @@ func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
 		return nil, fmt.Errorf("storage mem filed to load the file: %w", err)
 	}
 
-	if cfg.Envs.StoreInterval > 0 {
+	if storeInterval > 0 {
 		go fs.periodicSave()
 	}
 
@@ -53,23 +57,23 @@ func NewFileStorage(cfg *config.ServerConfig) (*FileStorage, error) {
 }
 
 func (fs *FileStorage) periodicSave() {
-	ticker := time.NewTicker(time.Second * time.Duration(fs.cfg.Envs.StoreInterval))
+	ticker := time.NewTicker(time.Second * time.Duration(fs.storeInterval))
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
 			if err := fs.saveToFile(); err != nil {
-				fs.cfg.Log.ErrorContext(context.Background(), "error saving the file")
+				fs.logger.ErrorContext(context.Background(), "error saving the file")
 			}
-			fs.cfg.Log.DebugContext(context.Background(), "saved storage state")
+			fs.logger.DebugContext(context.Background(), "saved storage state")
 		case <-fs.stopSaveChan:
 			return
 		}
 	}
 }
 
-func (fs *FileStorage) Close() error {
+func (fs *FileStorage) Close(ctx context.Context) error {
 	close(fs.stopSaveChan)
 	err := fs.saveToFile()
 	if err != nil {
@@ -145,7 +149,22 @@ func (fs *FileStorage) CreateRecord(metrics entities.Metrics) error {
 		return fmt.Errorf("file store: %w", err)
 	}
 
-	if fs.cfg.Envs.StoreInterval == 0 {
+	if fs.storeInterval == 0 {
+		err := fs.saveToFile()
+		if err != nil {
+			return fmt.Errorf("server service failed to save data to file %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (fs *FileStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
+	if err := fs.MemStorage.StoreMetricsBatch(metrics); err != nil {
+		return fmt.Errorf("file batch store: %w", err)
+	}
+
+	if fs.storeInterval == 0 {
 		err := fs.saveToFile()
 		if err != nil {
 			return fmt.Errorf("server service failed to save data to file %w", err)

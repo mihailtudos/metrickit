@@ -1,11 +1,8 @@
 package config
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"log/slog"
-	"os"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -21,6 +18,7 @@ type serverEnvs struct {
 	Address       string `env:"ADDRESS"`
 	LogLevel      string `env:"LOG_LEVEL"`
 	StorePath     string `env:"FILE_STORAGE_PATH"`
+	D3SN          string `env:"DATABASE_DSN"`
 	StoreInterval int    `env:"STORE_INTERVAL"`
 	ReStore       bool   `env:"RESTORE"`
 }
@@ -39,6 +37,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.IntVar(&envConfig.StoreInterval, "i", envConfig.StoreInterval, "metrics store interval in seconds")
 	flag.StringVar(&envConfig.StorePath, "f", envConfig.StorePath, "metrics store file path")
 	flag.BoolVar(&envConfig.ReStore, "r", envConfig.ReStore, "metrics re-store option")
+	flag.StringVar(&envConfig.D3SN, "d", "", "DB connection string")
 
 	flag.Parse()
 
@@ -50,26 +49,20 @@ func parseServerEnvs() (*serverEnvs, error) {
 }
 
 type ServerConfig struct {
-	Log             *slog.Logger
 	Envs            *serverEnvs
 	ShutdownTimeout int
 }
 
 func NewServerConfig() (*ServerConfig, error) {
-	logger := NewLogger(os.Stdout, defaultLogLevel)
-
 	envs, err := parseServerEnvs()
 	if err != nil {
-		return nil, errors.New("failed to create the config " + err.Error())
+		return nil, fmt.Errorf("failed to create the config %w", err)
 	}
 
-	if envs.LogLevel != defaultLogLevel {
-		logger = NewLogger(os.Stdout, envs.LogLevel)
-	}
-
-	return &ServerConfig{
-		Log:             logger,
+	cfg := &ServerConfig{
 		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
-	}, nil
+	}
+
+	return cfg, nil
 }

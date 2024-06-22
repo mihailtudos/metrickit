@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
-	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 )
 
@@ -25,29 +25,13 @@ func NewMetricsStorage() *MetricsStorage {
 }
 
 type MemStorage struct {
+	logger *slog.Logger
 	MetricsStorage
-	cfg *config.ServerConfig
-	mu  sync.Mutex
+	mu sync.Mutex
 }
 
-type Storage interface {
-	CreateRecord(metrics entities.Metrics) error
-	GetRecord(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error)
-	GetAllRecords() (*MetricsStorage, error)
-	GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error)
-	Close() error
-}
-
-func NewStorage(cfg *config.ServerConfig) (Storage, error) {
-	if cfg.Envs.StoreInterval >= 0 {
-		return NewFileStorage(cfg)
-	}
-
-	return NewMemStorage(cfg)
-}
-
-func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
-	cfg.Log.DebugContext(context.Background(), "created mem storage")
+func NewMemStorage(logger *slog.Logger) (*MemStorage, error) {
+	logger.DebugContext(context.Background(), "created mem storage")
 
 	ms := &MemStorage{
 		mu: sync.Mutex{},
@@ -55,14 +39,14 @@ func NewMemStorage(cfg *config.ServerConfig) (*MemStorage, error) {
 			Counter: make(map[entities.MetricName]entities.Counter),
 			Gauge:   make(map[entities.MetricName]entities.Gauge),
 		},
-		cfg: cfg,
+		logger: logger,
 	}
 
 	return ms, nil
 }
 
 func (ms *MemStorage) CreateRecord(metrics entities.Metrics) error {
-	ms.cfg.Log.DebugContext(context.Background(), fmt.Sprintf("creating %s record", metrics.MType))
+	ms.logger.DebugContext(context.Background(), fmt.Sprintf("creating %s record", metrics.MType))
 
 	switch entities.MetricType(metrics.MType) {
 	case entities.CounterMetricName:
@@ -112,7 +96,7 @@ func (ms *MemStorage) createGaugeRecord(metric entities.Metrics) error {
 func (ms *MemStorage) GetRecord(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
-	ms.cfg.Log.DebugContext(context.Background(), fmt.Sprintf("retrieving %s[%s] record", mType, mName))
+	ms.logger.DebugContext(context.Background(), fmt.Sprintf("retrieving %s[%s] record", mType, mName))
 
 	switch mType {
 	case entities.CounterMetricName:
@@ -188,6 +172,29 @@ func (ms *MemStorage) GetAllRecordsByType(mType entities.MetricType) (map[entiti
 	return copyCounterMap, nil
 }
 
-func (ms *MemStorage) Close() error {
+func (ms *MemStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	for _, metric := range metrics {
+		switch entities.MetricType(metric.MType) {
+		case entities.GaugeMetricName:
+			ms.Gauge[entities.MetricName(metric.ID)] = entities.Gauge(*metric.Value)
+		case entities.CounterMetricName:
+			ms.Counter[entities.MetricName(metric.ID)] += entities.Counter(*metric.Delta)
+		}
+	}
+
+	return nil
+}
+
+func (ms *MemStorage) Close(ctx context.Context) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
+	ms.MetricsStorage = MetricsStorage{
+		Counter: make(map[entities.MetricName]entities.Counter),
+		Gauge:   make(map[entities.MetricName]entities.Gauge),
+	}
+
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 //go:embed templates
@@ -17,10 +18,15 @@ type ServerHandler struct {
 	services    *server.Service
 	logger      *slog.Logger
 	TemplatesFs embed.FS
+	db          *pgxpool.Pool
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger) *ServerHandler {
-	return &ServerHandler{services: services, logger: logger, TemplatesFs: templatesFs}
+func NewHandler(services *server.Service, logger *slog.Logger, conn *pgxpool.Pool) *ServerHandler {
+	return &ServerHandler{
+		services:    services,
+		logger:      logger,
+		TemplatesFs: templatesFs,
+		db:          conn}
 }
 
 func (sh *ServerHandler) InitHandlers() http.Handler {
@@ -38,7 +44,10 @@ func (sh *ServerHandler) InitHandlers() http.Handler {
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", sh.handleUploads)
 
 	mux.Post("/update/", sh.handleJSONUploads)
+	mux.Post("/updates/", sh.handleBatchUploads)
 	mux.Post("/value/", sh.getJSONMetricValue)
+
+	mux.Get("/ping", sh.handleDBPing)
 
 	return mux
 }

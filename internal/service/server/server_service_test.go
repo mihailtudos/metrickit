@@ -1,25 +1,34 @@
 package server
 
 import (
+	"context"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
+	"github.com/mihailtudos/metrickit/internal/logger"
 )
 
 func TestCounterService(t *testing.T) {
 	cfg, err := config.NewServerConfig()
 	if err != nil {
-		log.Fatal("failed to get configs: " + err.Error())
+		log.Fatal("failed to get configs: ", err.Error())
 	}
 
-	store, err := storage.NewStorage(cfg)
+	l, err := logger.NewLogger(os.Stdout, cfg.Envs.LogLevel)
+	if err != nil {
+		log.Fatal("failed to crate new log: ", err.Error())
+	}
+
+	ctx := context.Background()
+	store, err := storage.NewStorage(nil, l, cfg.Envs.StoreInterval, cfg.Envs.StorePath)
 	if err != nil {
 		log.Fatal("failed to initiate storage: " + err.Error())
 	}
-	_ = store.Close()
+	_ = store.Close(ctx)
 	tests := []struct {
 		name  string
 		err   error

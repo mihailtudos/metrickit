@@ -19,7 +19,7 @@ func NewMetricsMemRepository(store storage.Storage) *MetricsMemRepository {
 func (cmr *MetricsMemRepository) Create(metric entities.Metrics) error {
 	err := cmr.store.CreateRecord(metric)
 	if err != nil {
-		return errors.New("failed to create the record: " + err.Error())
+		return fmt.Errorf("failed to create the record: %w", err)
 	}
 
 	return nil
@@ -33,7 +33,7 @@ func (cmr *MetricsMemRepository) Get(key entities.MetricName, mType entities.Met
 			return entities.Metrics{}, fmt.Errorf("item with key %s was not found: %w", key, err)
 		}
 
-		return entities.Metrics{}, errors.New("failed to get the item: " + err.Error())
+		return entities.Metrics{}, fmt.Errorf("failed to get the item: %w", err)
 	}
 
 	return record, nil
@@ -42,7 +42,7 @@ func (cmr *MetricsMemRepository) Get(key entities.MetricName, mType entities.Met
 func (cmr *MetricsMemRepository) GetAll() (*storage.MetricsStorage, error) {
 	store, err := cmr.store.GetAllRecords()
 	if err != nil {
-		return nil, errors.New("failed to get the metrics: " + err.Error())
+		return nil, fmt.Errorf("failed to get the metrics: %w", err)
 	}
 
 	return store, nil
@@ -52,8 +52,16 @@ func (cmr *MetricsMemRepository) GetAllByType(mType entities.MetricType) (map[en
 	error) {
 	metrics, err := cmr.store.GetAllRecordsByType(mType)
 	if err != nil {
-		return nil, errors.New("failed to get the metrics: " + err.Error())
+		return nil, fmt.Errorf("failed to get the metrics: %w", err)
 	}
 
 	return metrics, nil
+}
+
+func (cmr *MetricsMemRepository) StoreMetricsBatch(metrics []entities.Metrics) error {
+	if err := cmr.store.StoreMetricsBatch(metrics); err != nil {
+		return fmt.Errorf("mem storage error: %w", err)
+	}
+
+	return nil
 }

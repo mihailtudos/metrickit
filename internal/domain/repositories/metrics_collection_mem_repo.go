@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"runtime"
@@ -55,19 +56,19 @@ func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
 	}
 
 	if err := m.store.StoreGauge(gaugeMetrics); err != nil {
-		return errors.New("failed to store the metrics" + err.Error())
+		return fmt.Errorf("failed to store the metrics: %w", err)
 	}
 
 	if err := m.store.StoreCounter(); err != nil {
-		return errors.New("failed to store the metrics" + err.Error())
+		return fmt.Errorf("failed to store the metrics: %w", err)
 	}
 
 	pc, err := m.store.GetCounterMetric(entities.PollCount)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return errors.New("store metric: " + err.Error())
+			return fmt.Errorf("store metric: %w", err)
 		}
-		return errors.New("failed to get counter metric" + err.Error())
+		return fmt.Errorf("failed to get counter metric: %w", err)
 	}
 
 	m.logger.DebugContext(
@@ -80,12 +81,12 @@ func (m *MetricsCollectionMemRepository) Store(stats *runtime.MemStats) error {
 func (m *MetricsCollectionMemRepository) GetAll() (*entities.MetricsCollection, error) {
 	counters, err := m.store.GetCounterCollection()
 	if err != nil {
-		return nil, errors.New("failed to retrieve the Counter collection: " + err.Error())
+		return nil, fmt.Errorf("failed to retrieve the Counter collection: %w", err)
 	}
 
 	gauges, err := m.store.GetGaugeCollection()
 	if err != nil {
-		return nil, errors.New("failed to retrieve the Gauge collection: " + err.Error())
+		return nil, fmt.Errorf("failed to retrieve the Gauge collection: %w", err)
 	}
 
 	newMetricsCollection := entities.MetricsCollection{
