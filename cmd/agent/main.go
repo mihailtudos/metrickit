@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/mihailtudos/metrickit/internal/worker"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +11,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/agent"
+	"github.com/mihailtudos/metrickit/internal/worker"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
@@ -26,22 +26,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
 	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log, &agentCfg.Key)
 	// Create worker pool with the specified rate limit
 	workerPool := worker.NewWorkerPool(agentCfg.RateLimit)
-	workerPool.Run()
 
 	pollTicker := time.NewTicker(agentCfg.PollInterval)
 	defer pollTicker.Stop()
 	reportTicker := time.NewTicker(agentCfg.ReportInterval)
 	defer reportTicker.Stop()
 
-	//originalReportInterval := agentCfg.ReportInterval
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// originalReportInterval := agentCfg.ReportInterval
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -65,6 +64,8 @@ func main() {
 		}
 	}()
 
+	workerPool.Run(ctx)
+
 	for {
 		select {
 		case <-reportTicker.C:
@@ -74,7 +75,6 @@ func main() {
 			}
 			workerPool.AddTask(task)
 		case <-ctx.Done():
-			workerPool.Stop()
 			workerPool.Wait()
 			return
 		}

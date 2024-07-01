@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/shirou/gopsutil/v4/cpu"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
+	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
@@ -51,7 +51,7 @@ func (m *MetricsCollectionService) Collect() error {
 		return fmt.Errorf("failed to collect CPU metrics: %w", err)
 	}
 
-	gaugeMetrics := map[entities.MetricName]entities.Gauge{
+	gaugeMetrics := map[entities.MetricName]entities.Gauge{ //nolint:exhaustive // entities.PollCount is of type Counter
 		entities.RandomValue:     entities.Gauge(rand.Float64()),
 		entities.Alloc:           entities.Gauge(stats.Alloc),
 		entities.BuckHashSys:     entities.Gauge(stats.BuckHashSys),

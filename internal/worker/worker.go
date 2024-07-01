@@ -10,34 +10,36 @@ type Task interface {
 }
 
 type WorkerPool struct {
-	concurrency int
 	taskChan    chan Task
-	ctx         context.Context
-	cancel      context.CancelFunc
 	wg          sync.WaitGroup
+	concurrency int
 }
 
 func NewWorkerPool(concurrency int) *WorkerPool {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	return &WorkerPool{
 		concurrency: concurrency,
-		ctx:         ctx,
-		cancel:      cancel,
 		taskChan:    make(chan Task),
 	}
 }
 
-func (wp *WorkerPool) worker() {
-	for task := range wp.taskChan {
-		task.Process()
-		wp.wg.Done()
+func (wp *WorkerPool) worker(ctx context.Context) {
+	for {
+		select {
+		case task, ok := <-wp.taskChan:
+			if !ok {
+				return
+			}
+			task.Process()
+			wp.wg.Done()
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
-func (wp *WorkerPool) Run() {
-	for i := 0; i < wp.concurrency; i++ {
-		go wp.worker()
+func (wp *WorkerPool) Run(ctx context.Context) {
+	for range wp.concurrency {
+		go wp.worker(ctx)
 	}
 }
 
@@ -49,8 +51,4 @@ func (wp *WorkerPool) AddTask(task Task) {
 func (wp *WorkerPool) Wait() {
 	close(wp.taskChan)
 	wp.wg.Wait()
-}
-
-func (wp *WorkerPool) Stop() {
-	wp.cancel()
 }

@@ -1,9 +1,10 @@
 package repositories
 
 import (
+	"log/slog"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
-	"log/slog"
 )
 
 type MetricsCollectionRepository interface {
