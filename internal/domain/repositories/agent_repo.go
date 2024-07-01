@@ -2,14 +2,13 @@ package repositories
 
 import (
 	"log/slog"
-	"runtime"
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 )
 
 type MetricsCollectionRepository interface {
-	Store(stats *runtime.MemStats) error
+	Store(gaugeMetrics map[entities.MetricName]entities.Gauge) error
 	GetAll() (*entities.MetricsCollection, error)
 }
 
