@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"sync"
 )
 
@@ -9,10 +10,22 @@ type Task interface {
 }
 
 type WorkerPool struct {
-	Tasks       []Task
 	concurrency int
 	taskChan    chan Task
+	ctx         context.Context
+	cancel      context.CancelFunc
 	wg          sync.WaitGroup
+}
+
+func NewWorkerPool(concurrency int) *WorkerPool {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	return &WorkerPool{
+		concurrency: concurrency,
+		ctx:         ctx,
+		cancel:      cancel,
+		taskChan:    make(chan Task),
+	}
 }
 
 func (wp *WorkerPool) worker() {
@@ -23,20 +36,21 @@ func (wp *WorkerPool) worker() {
 }
 
 func (wp *WorkerPool) Run() {
-	// initialize the task chan
-	wp.taskChan = make(chan Task, len(wp.Tasks))
-
 	for i := 0; i < wp.concurrency; i++ {
 		go wp.worker()
 	}
+}
 
-	wp.wg.Add(len(wp.Tasks))
+func (wp *WorkerPool) AddTask(task Task) {
+	wp.wg.Add(1)
+	wp.taskChan <- task
+}
 
-	for _, task := range wp.Tasks {
-		wp.taskChan <- task
-	}
-
+func (wp *WorkerPool) Wait() {
 	close(wp.taskChan)
-
 	wp.wg.Wait()
+}
+
+func (wp *WorkerPool) Stop() {
+	wp.cancel()
 }
