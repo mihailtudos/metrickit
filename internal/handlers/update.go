@@ -272,10 +272,12 @@ func (sh *ServerHandler) isBodyValid(data []byte, reqHash string) bool {
 	if reqHash == "" {
 		return false
 	}
+	hashedStr := sh.getHash(data)
+	return hashedStr == reqHash
+}
 
+func (sh *ServerHandler) getHash(data []byte) string {
 	hash := hmac.New(sha256.New, []byte(sh.secret))
 	hash.Write(data)
-	hashedStr := hex.EncodeToString(hash.Sum(nil))
-
-	return hashedStr == reqHash
+	return hex.EncodeToString(hash.Sum(nil))
 }
