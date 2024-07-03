@@ -11,7 +11,7 @@ type Task interface {
 
 type WorkerPool struct {
 	taskChan    chan Task
-	wg          sync.WaitGroup
+	wg          *sync.WaitGroup
 	concurrency int
 }
 
@@ -19,10 +19,12 @@ func NewWorkerPool(concurrency int) *WorkerPool {
 	return &WorkerPool{
 		concurrency: concurrency,
 		taskChan:    make(chan Task),
+		wg:          &sync.WaitGroup{},
 	}
 }
 
 func (wp *WorkerPool) worker(ctx context.Context) {
+	defer wp.wg.Done()
 	for {
 		select {
 		case task, ok := <-wp.taskChan:
@@ -30,7 +32,6 @@ func (wp *WorkerPool) worker(ctx context.Context) {
 				return
 			}
 			task.Process()
-			wp.wg.Done()
 		case <-ctx.Done():
 			return
 		}
@@ -38,13 +39,13 @@ func (wp *WorkerPool) worker(ctx context.Context) {
 }
 
 func (wp *WorkerPool) Run(ctx context.Context) {
-	for i := 0; i < wp.concurrency; i++ { //nolint:intrange // requires go 1.22
+	wp.wg.Add(wp.concurrency)
+	for i := 0; i < wp.concurrency; i++ { // //nolint:intrange // requires higher go version
 		go wp.worker(ctx)
 	}
 }
 
 func (wp *WorkerPool) AddTask(task Task) {
-	wp.wg.Add(1)
 	wp.taskChan <- task
 }
 
