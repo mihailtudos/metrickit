@@ -50,7 +50,9 @@ func main() {
 		cancel()
 	}()
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for {
 			select {
 			case <-pollTicker.C:
