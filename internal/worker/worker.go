@@ -18,7 +18,7 @@ type WorkerPool struct {
 func NewWorkerPool(concurrency int) *WorkerPool {
 	return &WorkerPool{
 		concurrency: concurrency,
-		taskChan:    make(chan Task),
+		taskChan:    make(chan Task, concurrency),
 		wg:          &sync.WaitGroup{},
 	}
 }
@@ -40,7 +40,7 @@ func (wp *WorkerPool) worker(ctx context.Context) {
 
 func (wp *WorkerPool) Run(ctx context.Context) {
 	wp.wg.Add(wp.concurrency)
-	for i := 0; i < wp.concurrency; i++ { // //nolint:intrange // requires higher go version
+	for i := 0; i < wp.concurrency; i++ {
 		go wp.worker(ctx)
 	}
 }
