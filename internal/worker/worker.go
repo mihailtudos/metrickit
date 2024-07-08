@@ -40,7 +40,7 @@ func (wp *WorkerPool) worker(ctx context.Context) {
 
 func (wp *WorkerPool) Run(ctx context.Context) {
 	wp.wg.Add(wp.concurrency)
-	for i := 0; i < wp.concurrency; i++ {
+	for i := 0; i < wp.concurrency; i++ { //nolint:intrange //requires go v1.22
 		go wp.worker(ctx)
 	}
 }
