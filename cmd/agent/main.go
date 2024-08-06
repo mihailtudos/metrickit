@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/agent"
+	"github.com/mihailtudos/metrickit/internal/worker"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
@@ -24,54 +27,66 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
-	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log)
+	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log, &agentCfg.Key)
+
+	workerPool := worker.NewWorkerPool(agentCfg.RateLimit)
 
 	pollTicker := time.NewTicker(agentCfg.PollInterval)
 	defer pollTicker.Stop()
 	reportTicker := time.NewTicker(agentCfg.ReportInterval)
 	defer reportTicker.Stop()
 
-	originalReportInterval := agentCfg.ReportInterval
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
 
-	for {
-		select {
-		case <-pollTicker.C:
-			if err = metricsService.MetricsService.Collect(); err != nil {
-				agentCfg.Log.ErrorContext(context.Background(),
-					"failed to collect the metrics: ",
-					helpers.ErrAttr(err))
-			}
-		case <-reportTicker.C:
-			retries := 3
-			backoffIntervals := []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}
-			success := false
-
-			for attempt := range backoffIntervals {
-				err = metricsService.MetricsService.Send(agentCfg.ServerAddr)
-				if err == nil {
-					metricsStore.Clear()
-					reportTicker.Reset(originalReportInterval)
-					success = true
-					break
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-pollTicker.C:
+				if err = metricsService.MetricsService.Collect(); err != nil {
+					agentCfg.Log.ErrorContext(ctx,
+						"failed to collect the metrics: ",
+						helpers.ErrAttr(err))
 				}
-
-				agentCfg.Log.ErrorContext(context.Background(),
-					fmt.Sprintf("Attempt %d: failed to publish the metrics: %v", attempt+1, err),
-					helpers.ErrAttr(err))
-
-				if attempt < retries {
-					time.Sleep(backoffIntervals[attempt])
-				}
-			}
-
-			if !success {
-				agentCfg.Log.ErrorContext(context.Background(),
-					"All retry attempts failed. Exiting the program.",
-					helpers.ErrAttr(err))
+			case <-ctx.Done():
 				return
 			}
 		}
-	}
+	}()
+
+	workerPool.Run(ctx)
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-reportTicker.C:
+				task := &agent.SendMetricsTask{
+					Service:    metricsService,
+					ServerAddr: agentCfg.ServerAddr,
+					Log:        agentCfg.Log,
+				}
+				workerPool.AddTask(task)
+			case <-ctx.Done():
+				workerPool.Wait()
+				return
+			}
+		}
+	}()
+
+	wg.Wait()
 }

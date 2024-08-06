@@ -19,18 +19,22 @@ type ServerHandler struct {
 	logger      *slog.Logger
 	TemplatesFs embed.FS
 	db          *pgxpool.Pool
+	secret      string
 }
 
-func NewHandler(services *server.Service, logger *slog.Logger, conn *pgxpool.Pool) *ServerHandler {
+func NewHandler(services *server.Service, logger *slog.Logger,
+	conn *pgxpool.Pool, secret string) *ServerHandler {
 	return &ServerHandler{
 		services:    services,
 		logger:      logger,
 		TemplatesFs: templatesFs,
-		db:          conn}
+		db:          conn,
+		secret:      secret}
 }
 
 func (sh *ServerHandler) InitHandlers() http.Handler {
 	mux := chi.NewMux()
+
 	mux.Use(sh.RequestLogger, sh.WithCompressedResponse)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
