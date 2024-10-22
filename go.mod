@@ -1,6 +1,5 @@
 module github.com/mihailtudos/metrickit
 
-// TODO(SSH): bump the version to 1.22
 go 1.22.4
 
 require (
