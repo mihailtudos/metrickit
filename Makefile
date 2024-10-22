@@ -7,10 +7,24 @@ run/agent:
 	go run ./cmd/agent/. $(ARGS)
 
 run/tests:
-	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	go test ./... --count=1 -coverprofile cover.out && go tool cover -func cover.out
 
 show/cover:
-	go tool cover -html=profile.cov
+	go tool cover -html=cover.out
+
+run/pprof-snap:
+	curl http://localhost:8080/debug/pprof/profile\?seconds=30 -o ./profiles/result.pprof
+
+show/pprof-base:
+	go tool pprof -http=":9090" ./profiles/base.pprof
+
+show/pprof-res:
+	go tool pprof -http=":9090" ./profiles/result.pprof
+
+show/pprof-diff:
+	pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
+
 
 gci/report:
 	cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"io"
 	"net/http"
 	"strings"
@@ -74,7 +75,7 @@ func (sh *ServerHandler) WithCompressedResponse(next http.Handler) http.Handler 
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				sh.logger.ErrorContext(r.Context(), "failed to read req body: %w", err)
+				sh.logger.ErrorContext(r.Context(), "failed to read req body: %w", helpers.ErrAttr(err))
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}

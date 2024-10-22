@@ -51,6 +51,7 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools
           mv $GITHUB_WORKSPACE/.tools/metricstest /usr/local/bin/metricstest
           mv $GITHUB_WORKSPACE/.tools/random /usr/local/bin/random
+          mv $GITHUB_WORKSPACE/.tools/shortenertestbeta /usr/local/bin/shortenertestbeta
 
       - name: Setup go deps
         run: |
@@ -352,3 +353,47 @@ jobs:
           github.head_ref == 'iter14'
         run: |
           go test -v -race ./...
+
+      - name: "Code increment #16"
+        if: |
+          github.ref == 'refs/heads/main' ||
+          github.head_ref == 'iter16' ||
+          github.head_ref == 'iter17' ||
+          github.head_ref == 'iter18' ||
+          github.head_ref == 'iter19' ||
+          github.head_ref == 'iter20' ||
+          github.head_ref == 'iter21' ||
+          github.head_ref == 'iter22' ||
+          github.head_ref == 'iter23' ||
+          github.head_ref == 'iter24'
+        run: |
+          shortenertestbeta -test.v -test.run=^TestIteration16$ \
+              -source-path=. \
+          
+      - name: "Code increment #17"
+        if: |
+          github.ref == 'refs/heads/main' ||
+          github.head_ref == 'iter17' ||
+          github.head_ref == 'iter18' ||
+          github.head_ref == 'iter19' ||
+          github.head_ref == 'iter20' ||
+          github.head_ref == 'iter21' ||
+          github.head_ref == 'iter22' ||
+          github.head_ref == 'iter23' ||
+          github.head_ref == 'iter24'
+        run: |
+          shortenertestbeta -test.v -test.run=^TestIteration17$ \
+              -source-path=. \
+      - name: "Code increment #18"
+        if: |
+          github.ref == 'refs/heads/main' ||
+          github.head_ref == 'iter18' ||
+          github.head_ref == 'iter19' ||
+          github.head_ref == 'iter20' ||
+          github.head_ref == 'iter21' ||
+          github.head_ref == 'iter22' ||
+          github.head_ref == 'iter23' ||
+          github.head_ref == 'iter24'
+        run: |
+          shortenertestbeta -test.v -test.run=^TestIteration18$ \
+              -source-path=. \

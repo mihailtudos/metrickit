@@ -18,6 +18,7 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "net/http/pprof"
 )
 
 type ServerApp struct {
@@ -86,13 +87,13 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	h := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
+	router := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
 
 	app.logger.DebugContext(context.Background(), "running server 🔥",
 		slog.String("address", app.cfg.Envs.Address))
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
-		Handler: h.InitHandlers(),
+		Handler: router,
 	}
 
 	if err = srv.ListenAndServe(); err != nil {
