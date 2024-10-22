@@ -30,7 +30,8 @@ func NewHandler(services *server.Service, logger *slog.Logger,
 		logger:      logger,
 		TemplatesFs: templatesFs,
 		db:          conn,
-		secret:      secret}
+		secret:      secret,
+	}
 
 	return handlers.registerRoutes()
 }
@@ -38,7 +39,7 @@ func NewHandler(services *server.Service, logger *slog.Logger,
 func (sh *ServerHandler) registerRoutes() http.Handler {
 	mux := chi.NewMux()
 
-	mux.Use(sh.RequestLogger, sh.WithCompressedResponse)
+	mux.Use(RequestLogger(sh.logger), sh.WithCompressedResponse)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain

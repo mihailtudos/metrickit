@@ -34,28 +34,30 @@ func (l *logWriter) WriteHeader(status int) {
 	l.ResponseWriter.WriteHeader(status)
 }
 
-func (sh *ServerHandler) RequestLogger(h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		uri := r.RequestURI
-		method := r.Method
-		start := time.Now()
-		proto := r.Proto
+func RequestLogger(logger *slog.Logger) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			uri := r.RequestURI
+			method := r.Method
+			start := time.Now()
+			proto := r.Proto
 
-		respData := &responseData{status: http.StatusOK}
-		lw := &logWriter{responseData: respData, ResponseWriter: w}
+			respData := &responseData{status: http.StatusOK}
+			lw := &logWriter{responseData: respData, ResponseWriter: w}
 
-		h.ServeHTTP(lw, r)
-		duration := time.Since(start)
+			h.ServeHTTP(lw, r)
+			duration := time.Since(start)
 
-		sh.logger.InfoContext(r.Context(),
-			"incoming "+proto,
-			slog.String("uri", uri),
-			slog.String("method", method),
-			slog.String("duration", duration.String()),
-			slog.Int("status", respData.status),
-			slog.Int("size", respData.size),
-		)
+			logger.InfoContext(r.Context(),
+				"incoming "+proto,
+				slog.String("uri", uri),
+				slog.String("method", method),
+				slog.String("duration", duration.String()),
+				slog.Int("status", respData.status),
+				slog.Int("size", respData.size),
+			)
+		}
+
+		return http.HandlerFunc(fn)
 	}
-
-	return http.HandlerFunc(fn)
 }
