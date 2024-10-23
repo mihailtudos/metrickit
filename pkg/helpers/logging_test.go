@@ -2,9 +2,10 @@ package helpers
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestErrAttr(t *testing.T) {
@@ -31,5 +32,4 @@ func TestErrAttr(t *testing.T) {
 			assert.Equal(t, test.expected, res)
 		})
 	}
-
 }

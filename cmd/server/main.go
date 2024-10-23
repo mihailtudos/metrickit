@@ -17,8 +17,9 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	_ "net/http/pprof"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ServerApp struct {

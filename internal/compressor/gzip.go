@@ -52,7 +52,7 @@ func (c *Compressor) Decompress(r io.Reader) ([]byte, error) {
 	}()
 
 	var b bytes.Buffer
-	if _, err := b.ReadFrom(r); err != nil {
+	if _, err := b.ReadFrom(gr); err != nil {
 		return nil, fmt.Errorf("decompress function failed to read from the writter: %w", err)
 	}
 

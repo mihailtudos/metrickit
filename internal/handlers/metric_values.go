@@ -20,7 +20,6 @@ import (
 
 var ErrUnknownMetric = errors.New("unknown metric type")
 
-const contentType = "Content-Type"
 const bodyKey = "body"
 
 func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +41,7 @@ func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, "text/html; charset=utf-8")
+	w.Header().Set(helpers.ContentType, "text/html; charset=utf-8")
 	err = tmpl.ExecuteTemplate(w, "index.html", metrics)
 
 	if err != nil {
@@ -81,7 +80,7 @@ func (sh *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.Header().Set(contentType, "text/plain; charset=utf-8")
+	w.Header().Set(helpers.ContentType, "text/plain; charset=utf-8")
 	switch entities.MetricType(currentMetric.MType) {
 	case entities.CounterMetricName:
 		w.WriteHeader(http.StatusOK)
@@ -140,7 +139,7 @@ func (sh *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set(contentType, "application/json; charset=utf-8")
+	w.Header().Set(helpers.ContentType, "application/json; charset=utf-8")
 	jsonMetric, err := json.MarshalIndent(currentMetric, "", "  ")
 	if err != nil {
 		sh.logger.ErrorContext(r.Context(),

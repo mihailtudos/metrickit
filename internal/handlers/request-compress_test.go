@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"compress/gzip"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -105,8 +104,8 @@ func TestCompressResponseWriter(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		if tt.encoding == "gzip" && tt.compressed {
-			compressor := compressor.NewCompressor(log)
-			compressedData, err := compressor.Compress(tt.requestBody)
+			cps := compressor.NewCompressor(log)
+			compressedData, err := cps.Compress(tt.requestBody)
 			require.NoError(t, err)
 			requestBody = bytes.NewReader(compressedData)
 		} else {
@@ -125,14 +124,11 @@ func TestCompressResponseWriter(t *testing.T) {
 		if tt.compressed {
 			assert.Equal(t, tt.acceptEncoding, rr.Header().Get("Content-Encoding"))
 			if tt.responseBody != nil && tt.requestBody != nil {
-				var decompressedBody bytes.Buffer
-
-				gz, err := gzip.NewReader(rr.Body)
+				cps := compressor.NewCompressor(log)
+				decompressedBody, err := cps.Decompress(rr.Body)
 				require.NoError(t, err)
-				defer gz.Close()
-				_, err = decompressedBody.ReadFrom(gz)
 
-				assert.Equal(t, string(tt.responseBody), decompressedBody.String())
+				assert.Equal(t, string(tt.responseBody), string(decompressedBody))
 			}
 		} else {
 			assert.Equal(t, "", rr.Header().Get("Content-Encoding"))
