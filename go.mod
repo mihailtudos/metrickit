@@ -1,6 +1,6 @@
 module github.com/mihailtudos/metrickit
 
-go 1.21.3
+go 1.21.9
 
 require (
 	github.com/caarlos0/env/v11 v11.0.0
