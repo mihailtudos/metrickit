@@ -8,10 +8,10 @@ run/agent:
 
 run/tests:
 	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...
-	go test ./... -count=1 -coverprofile cover.out && go tool cover -func cover.out
+	go test ./... -count=1 -coverprofile ./profiles/cover.out && go tool cover -func ./profiles/cover.out
 
 show/cover:
-	go tool cover -html=cover.out
+	go tool cover -html=./profiles/cover.out
 
 run/pprof-snap:
 	curl http://localhost:8080/debug/pprof/profile\?seconds=30 -o ./profiles/result.pprof
