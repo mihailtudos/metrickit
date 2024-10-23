@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mihailtudos/metrickit/internal/logger"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -60,14 +61,14 @@ func TestLogWriter(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			loggedHandler.ServeHTTP(rr, r)
-			require.Equal(t, tt.responseCode, rr.Code)
+			assert.Equal(t, tt.responseCode, rr.Code)
 
 			logOutput := logBuf.String()
-			require.Contains(t, logOutput, fmt.Sprintf(`"uri":"%s"`, tt.path))
-			require.Contains(t, logOutput, fmt.Sprintf(`"method":"%s"`, tt.method))
-			require.Contains(t, logOutput, fmt.Sprintf(`"status":%d`, tt.responseCode))
-			require.Contains(t, logOutput, `"duration":`)
-			require.Contains(t, logOutput, fmt.Sprintf(`"size":%d`, len(tt.responseBody)))
+			assert.Contains(t, logOutput, fmt.Sprintf(`"uri":"%s"`, tt.path))
+			assert.Contains(t, logOutput, fmt.Sprintf(`"method":"%s"`, tt.method))
+			assert.Contains(t, logOutput, fmt.Sprintf(`"status":%d`, tt.responseCode))
+			assert.Contains(t, logOutput, `"duration":`)
+			assert.Contains(t, logOutput, fmt.Sprintf(`"size":%d`, len(tt.responseBody)))
 		})
 	}
 }

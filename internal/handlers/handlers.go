@@ -39,7 +39,10 @@ func NewHandler(services *server.Service, logger *slog.Logger,
 func (sh *ServerHandler) registerRoutes() http.Handler {
 	mux := chi.NewMux()
 
-	mux.Use(RequestLogger(sh.logger), sh.WithCompressedResponse)
+	mux.Use(
+		RequestLogger(sh.logger),
+		WithCompressedResponse(sh.logger),
+	)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain

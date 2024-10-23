@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"github.com/mihailtudos/metrickit/pkg/helpers"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/mihailtudos/metrickit/internal/compressor"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 var compressibleContentTypes = map[string]struct{}{
@@ -39,6 +40,7 @@ func (crw *compressResponseWriter) writer() io.Writer {
 	if crw.compressible {
 		return crw.gzipWriter
 	}
+
 	return crw.ResponseWriter
 }
 
@@ -61,7 +63,7 @@ func (crw *compressResponseWriter) WriteHeader(code int) {
 }
 
 func (crw *compressResponseWriter) isCompressible() bool {
-	contentType := crw.Header().Get(contentType)
+	contentType := crw.Header().Get("Content-Type")
 	if strings.Contains(contentType, ";") {
 		contentType = strings.Split(contentType, ";")[0]
 	}
@@ -70,44 +72,38 @@ func (crw *compressResponseWriter) isCompressible() bool {
 	return ok
 }
 
-func (sh *ServerHandler) WithCompressedResponse(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Encoding") == "gzip" {
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				sh.logger.ErrorContext(r.Context(), "failed to read req body: %w", helpers.ErrAttr(err))
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-
-			c := compressor.NewCompressor(sh.logger)
-			decompressedBody, err := c.Decompress(body)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-
-			r.Body = io.NopCloser(bytes.NewReader(decompressedBody))
-			r.Header.Del("Content-Encoding")
-		}
-
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		crw := &compressResponseWriter{
-			ResponseWriter: w,
-		}
-
-		next.ServeHTTP(crw, r)
-
-		if crw.compressible && crw.gzipWriter != nil {
-			defer func() {
-				if err := crw.gzipWriter.Close(); err != nil {
-					fmt.Println("Error closing gzip writer:", err)
+func WithCompressedResponse(logger *slog.Logger) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Encoding") == "gzip" {
+				c := compressor.NewCompressor(logger)
+				decompressedBody, err := c.Decompress(r.Body)
+				if err != nil {
+					http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+					return
 				}
-			}()
-		}
-	})
+
+				r.Body = io.NopCloser(bytes.NewReader(decompressedBody))
+				r.Header.Del("Content-Encoding")
+			}
+
+			if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			crw := &compressResponseWriter{
+				ResponseWriter: w,
+			}
+
+			next.ServeHTTP(crw, r)
+			if crw.compressible && crw.gzipWriter != nil {
+				defer func() {
+					if err := crw.gzipWriter.Close(); err != nil {
+						logger.ErrorContext(r.Context(), "failed to close the gzip writer", helpers.ErrAttr(err))
+					}
+				}()
+			}
+		})
+	}
 }

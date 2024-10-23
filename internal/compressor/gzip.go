@@ -2,9 +2,10 @@ package compressor
 
 import (
 	"bytes"
-	"compress/flate"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 
 	"github.com/mihailtudos/metrickit/pkg/helpers"
@@ -21,29 +22,28 @@ func NewCompressor(logger *slog.Logger) Compressor {
 }
 
 func (c *Compressor) Compress(data []byte) ([]byte, error) {
-	var b bytes.Buffer
-	w, err := flate.NewWriter(&b, flate.BestSpeed)
+	var buf bytes.Buffer
+	gzWriter := gzip.NewWriter(&buf)
+	_, err := gzWriter.Write(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed init compress writer: %w", err)
 	}
 
-	_, err = w.Write(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed write data to compress temporary buffer: %w", err)
+	if err := gzWriter.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close gzip writer: %w", err)
 	}
 
-	err = w.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed compress data: %w", err)
-	}
-
-	return b.Bytes(), nil
+	return buf.Bytes(), nil
 }
 
-func (c *Compressor) Decompress(data []byte) ([]byte, error) {
-	r := flate.NewReader(bytes.NewReader(data))
+func (c *Compressor) Decompress(r io.Reader) ([]byte, error) {
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+
 	defer func() {
-		if err := r.Close(); err != nil {
+		if err := gr.Close(); err != nil {
 			c.logger.ErrorContext(
 				context.Background(),
 				"failed to close the reader",
