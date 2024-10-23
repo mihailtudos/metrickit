@@ -4,6 +4,7 @@ import (
 	"embed"
 	"log/slog"
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/mihailtudos/metrickit/internal/service/server"
 
@@ -23,19 +24,25 @@ type ServerHandler struct {
 }
 
 func NewHandler(services *server.Service, logger *slog.Logger,
-	conn *pgxpool.Pool, secret string) *ServerHandler {
-	return &ServerHandler{
+	conn *pgxpool.Pool, secret string) http.Handler {
+	handlers := &ServerHandler{
 		services:    services,
 		logger:      logger,
 		TemplatesFs: templatesFs,
 		db:          conn,
-		secret:      secret}
+		secret:      secret,
+	}
+
+	return handlers.registerRoutes()
 }
 
-func (sh *ServerHandler) InitHandlers() http.Handler {
+func (sh *ServerHandler) registerRoutes() http.Handler {
 	mux := chi.NewMux()
 
-	mux.Use(sh.RequestLogger, sh.WithCompressedResponse)
+	mux.Use(
+		RequestLogger(sh.logger),
+		WithCompressedResponse(sh.logger),
+	)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
 	// Content-Type: text/plain
@@ -52,6 +59,14 @@ func (sh *ServerHandler) InitHandlers() http.Handler {
 	mux.Post("/value/", sh.getJSONMetricValue)
 
 	mux.Get("/ping", sh.handleDBPing)
+
+	// Register pprof handlers
+	mux.Get("/debug/pprof/", http.HandlerFunc(pprof.Index))
+	mux.Get("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	mux.Get("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	mux.Get("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	mux.Get("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
+	mux.Handle("/debug/pprof/{profile}", http.HandlerFunc(pprof.Index))
 
 	return mux
 }
