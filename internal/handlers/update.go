@@ -101,7 +101,7 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 	}()
 
 	if sh.secret != "" {
-		if !sh.isBodyValid(body, r.Header.Get("HashSHA256")) {
+		if !isBodyValid(body, r.Header.Get("HashSHA256"), sh.secret) {
 			sh.logger.DebugContext(r.Context(),
 				"request body failed integrity check")
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -118,6 +118,17 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 			slog.String(bodyKey, string(body)))
 		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Validate each metric type
+	for _, metric := range metrics {
+		if !isValidMetricType(metric.MType) {
+			sh.logger.DebugContext(r.Context(),
+				"unsupported metric type",
+				slog.String("metric_type", metric.MType))
+			http.Error(w, "Unsupported metric type", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	sh.logger.DebugContext(r.Context(),
@@ -153,12 +164,12 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 		}
 	}()
 
-	err = json.Unmarshal(body, &metric)
-	if err != nil {
+	// Handle JSON unmarshal error
+	if err = json.Unmarshal(body, &metric); err != nil {
 		sh.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
 			slog.String(bodyKey, string(body)))
-		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusBadRequest)
+		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusBadRequest) // Changed to 400
 		return
 	}
 
@@ -268,16 +279,20 @@ func (sh *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.M
 	}
 }
 
-func (sh *ServerHandler) isBodyValid(data []byte, reqHash string) bool {
+func isBodyValid(data []byte, reqHash, secret string) bool {
 	if reqHash == "" {
 		return false
 	}
-	hashedStr := sh.getHash(data)
+	hashedStr := getHash(data, secret)
 	return hashedStr == reqHash
 }
 
-func (sh *ServerHandler) getHash(data []byte) string {
-	hash := hmac.New(sha256.New, []byte(sh.secret))
+func getHash(data []byte, secret string) string {
+	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write(data)
 	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func isValidMetricType(mType string) bool {
+	return mType == string(entities.CounterMetricName) || mType == string(entities.GaugeMetricName)
 }
