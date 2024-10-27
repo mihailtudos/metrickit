@@ -54,3 +54,36 @@ func TestCompressor(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func BenchmarkCompressor_Compress(b *testing.B) {
+	logger := slog.Default()
+	compressor := NewCompressor(logger)
+
+	input := []byte("Hello, World!") // Change this to larger data if needed
+
+	for i := 0; i < b.N; i++ {
+		_, err := compressor.Compress(input)
+		if err != nil {
+			b.Fatalf("Compress failed: %v", err)
+		}
+	}
+}
+
+func BenchmarkCompressor_Decompress(b *testing.B) {
+	logger := slog.Default()
+	compressor := NewCompressor(logger)
+
+	// Compress some data to have valid input for decompression
+	input := []byte("Hello, World!")
+	compressedData, err := compressor.Compress(input)
+	if err != nil {
+		b.Fatalf("Compress failed: %v", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := compressor.Decompress(bytes.NewReader(compressedData))
+		if err != nil {
+			b.Fatalf("Decompress failed: %v", err)
+		}
+	}
+}
