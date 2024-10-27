@@ -26,11 +26,11 @@ func TestWorkerPool(t *testing.T) {
 		wp := NewWorkerPool(3)
 		ctx := context.Background()
 		processed := &atomic.Int32{}
-		
+
 		wp.Run(ctx)
 
-		numTasks := 10
-		for i := 0; i < numTasks; i++ {
+		const numTasks = 10
+		for range [numTasks]int{} {
 			wp.AddTask(newMockTask(processed))
 		}
 
@@ -42,11 +42,11 @@ func TestWorkerPool(t *testing.T) {
 		wp := NewWorkerPool(2)
 		ctx, cancel := context.WithCancel(context.Background())
 		processed := &atomic.Int32{}
-		
+
 		wp.Run(ctx)
 
 		// Add some tasks
-		for i := 0; i < 5; i++ {
+		for range [5]int{} {
 			wp.AddTask(newMockTask(processed))
 		}
 
@@ -61,7 +61,7 @@ func TestWorkerPool(t *testing.T) {
 	t.Run("worker pool with zero tasks", func(t *testing.T) {
 		wp := NewWorkerPool(1)
 		ctx := context.Background()
-		
+
 		wp.Run(ctx)
 		wp.Wait()
 		// Test passes if no panic occurs
@@ -71,18 +71,18 @@ func TestWorkerPool(t *testing.T) {
 		wp := NewWorkerPool(4)
 		ctx := context.Background()
 		processed := &atomic.Int32{}
-		
+
 		wp.Run(ctx)
 
 		// Concurrently add tasks
 		go func() {
-			for i := 0; i < 5; i++ {
+			for range [5]int{} {
 				wp.AddTask(newMockTask(processed))
 			}
 		}()
 
 		go func() {
-			for i := 0; i < 5; i++ {
+			for range [5]int{} {
 				wp.AddTask(newMockTask(processed))
 			}
 		}()

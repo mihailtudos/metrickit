@@ -6,6 +6,7 @@ import (
 
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +24,6 @@ func TestNewAgentRepository(t *testing.T) {
 }
 
 func TestAgentRepository_Store(t *testing.T) {
-	// Setup
 	store := storage.NewMetricsCollection()
 	logger := slog.Default()
 	repo := NewAgentRepository(store, logger)
@@ -33,6 +33,7 @@ func TestAgentRepository_Store(t *testing.T) {
 		metrics map[entities.MetricName]entities.Gauge
 		wantErr bool
 	}{
+		//nolint:exhaustive // Ignoring exhaustive check, only testing a subset of metrics
 		{
 			name: "successfully stores gauge metrics",
 			metrics: map[entities.MetricName]entities.Gauge{

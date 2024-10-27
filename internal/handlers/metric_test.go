@@ -22,7 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getServerSetup(t *testing.T) ServerHandler {
+func helperServerSetup(t *testing.T) ServerHandler {
+	t.Helper()
 	logger := slog.Default()
 	memStore, err := storage.NewMemStorage(logger)
 	require.NoError(t, err)
@@ -37,10 +38,10 @@ func getServerSetup(t *testing.T) ServerHandler {
 		secret:      "test",
 		services:    services,
 	}
-
 }
+
 func TestSingleUploadsHandler(t *testing.T) {
-	sh := getServerSetup(t)
+	sh := helperServerSetup(t)
 
 	tests := []struct {
 		name         string
@@ -95,7 +96,7 @@ func TestSingleUploadsHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/updates/", nil)
+			req := httptest.NewRequest(http.MethodPost, "/updates/", http.NoBody)
 			req = req.WithContext(context.Background())
 
 			// Set URL parameters
@@ -118,7 +119,7 @@ func TestSingleUploadsHandler(t *testing.T) {
 }
 
 func TestHandleJSONUploads(t *testing.T) {
-	sh := getServerSetup(t)
+	sh := helperServerSetup(t)
 
 	tests := []struct {
 		name         string
@@ -196,7 +197,7 @@ func TestHandleJSONUploads(t *testing.T) {
 	}
 }
 
-// Helper functions to create pointers for test cases
+// Helper functions to create pointers for test cases.
 func int64Ptr(i int64) *int64 {
 	return &i
 }
@@ -206,7 +207,7 @@ func float64Ptr(f float64) *float64 {
 }
 
 func TestBatchUploadsHandler(t *testing.T) {
-	sh := getServerSetup(t)
+	sh := helperServerSetup(t)
 
 	tests := []struct {
 		name         string
@@ -427,7 +428,7 @@ func TestIsMetricNameAndValuePresent(t *testing.T) {
 	}
 }
 
-// Helper functions to create pointers
+// Helper functions to create pointers.
 func ptrInt64(i int64) *int64 {
 	return &i
 }
