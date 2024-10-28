@@ -59,11 +59,11 @@ const (
 // GaugeMetric represents a gauge metric with its associated name and value.
 type GaugeMetric struct {
 	Name  MetricName // The name of the gauge metric.
-	Value Gauge       // The value of the gauge metric.
+	Value Gauge      // The value of the gauge metric.
 }
 
 // CounterMetric represents a counter metric with its associated name and value.
 type CounterMetric struct {
 	Name  MetricName // The name of the counter metric.
-	Value Counter     // The value of the counter metric.
+	Value Counter    // The value of the counter metric.
 }

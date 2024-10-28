@@ -14,7 +14,7 @@ type MetricsCollectionRepository interface {
 	// Store saves the given gauge metrics into the repository.
 	// It returns an error if the operation fails.
 	Store(gaugeMetrics map[entities.MetricName]entities.Gauge) error
-	
+
 	// GetAll retrieves all metrics from the repository.
 	// It returns a pointer to a MetricsCollection and an error if the operation fails.
 	GetAll() (*entities.MetricsCollection, error)

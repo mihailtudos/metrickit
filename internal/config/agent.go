@@ -1,8 +1,8 @@
 // Package config provides configuration settings for the agent application.
 //
-// It supports configuration through environment variables, command-line flags, 
-// and default settings. The package allows setting up the agent's environment 
-// variables, including logging, server address, secret key, rate limits, and 
+// It supports configuration through environment variables, command-line flags,
+// and default settings. The package allows setting up the agent's environment
+// variables, including logging, server address, secret key, rate limits, and
 // polling intervals.
 package config
 
@@ -13,23 +13,23 @@ import (
 	"os"
 	"time"
 
-	"github.com/mihailtudos/metrickit/internal/logger"
 	"github.com/caarlos0/env/v11"
+	"github.com/mihailtudos/metrickit/internal/logger"
 )
 
 // Default values for various configuration settings.
-const defaultReportInterval = 10  // Default interval for reporting metrics, in seconds.
-const defaultPoolInterval = 2     // Default interval for polling metrics, in seconds.
-const defaultRateLimit = 10       // Default rate limit for concurrent operations.
+const defaultReportInterval = 10 // Default interval for reporting metrics, in seconds.
+const defaultPoolInterval = 2    // Default interval for polling metrics, in seconds.
+const defaultRateLimit = 10      // Default rate limit for concurrent operations.
 
 // AgentEnvs represents the agent's runtime configuration settings.
 type AgentEnvs struct {
-	Log            *slog.Logger    // Logger used by the agent.
-	ServerAddr     string          // Address of the server to which metrics are sent.
-	Key            string          // Secret key used for signing data.
-	RateLimit      int             // Maximum number of concurrent goroutines.
-	PollInterval   time.Duration   // Interval between metric polling operations.
-	ReportInterval time.Duration   // Interval between sending metrics to the server.
+	Log            *slog.Logger  // Logger used by the agent.
+	ServerAddr     string        // Address of the server to which metrics are sent.
+	Key            string        // Secret key used for signing data.
+	RateLimit      int           // Maximum number of concurrent goroutines.
+	PollInterval   time.Duration // Interval between metric polling operations.
+	ReportInterval time.Duration // Interval between sending metrics to the server.
 }
 
 // envAgentConfig is a struct for parsing environment variables into agent configuration settings.
@@ -42,8 +42,8 @@ type envAgentConfig struct {
 	RateLimit      int    `env:"RATE_LIMIT"`      // Rate limit, configurable via environment variable "RATE_LIMIT".
 }
 
-// NewAgentConfig creates a new AgentEnvs instance by parsing environment variables 
-// and command-line flags. It sets up default values, overrides them with environment 
+// NewAgentConfig creates a new AgentEnvs instance by parsing environment variables
+// and command-line flags. It sets up default values, overrides them with environment
 // variables if provided, and applies command-line flag values.
 //
 // Returns:
@@ -71,8 +71,8 @@ func NewAgentConfig() (*AgentEnvs, error) {
 	}, nil
 }
 
-// parseAgentEnvs reads environment variables and command-line flags to populate 
-// an envAgentConfig instance. It applies default values first, then overrides 
+// parseAgentEnvs reads environment variables and command-line flags to populate
+// an envAgentConfig instance. It applies default values first, then overrides
 // them with environment variables, and finally with command-line flags.
 //
 // Returns:
@@ -80,10 +80,10 @@ func NewAgentConfig() (*AgentEnvs, error) {
 //   - error: An error if environment parsing fails.
 func parseAgentEnvs() (*envAgentConfig, error) {
 	envConfig := &envAgentConfig{
-		LogLevel:       defaultLogLevel,                             // Default log level.
-		PollInterval:   defaultPoolInterval,                         // Default polling interval.
-		ReportInterval: defaultReportInterval,                       // Default reporting interval.
-		RateLimit:      defaultRateLimit,                            // Default rate limit.
+		LogLevel:       defaultLogLevel,                                   // Default log level.
+		PollInterval:   defaultPoolInterval,                               // Default polling interval.
+		ReportInterval: defaultReportInterval,                             // Default reporting interval.
+		RateLimit:      defaultRateLimit,                                  // Default rate limit.
 		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort), // Default server address.
 	}
 
