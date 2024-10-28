@@ -23,18 +23,21 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
+// MetricsCollectionService is a service for collecting and storing metrics.
 type MetricsCollectionService struct {
 	mRepo  repositories.MetricsCollectionRepository
 	logger *slog.Logger
 	secret *string
 }
 
+// NewMetricsCollectionService creates a new MetricsCollectionService.
 func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
 	logger *slog.Logger,
 	secret *string) *MetricsCollectionService {
 	return &MetricsCollectionService{mRepo: repo, logger: logger, secret: secret}
 }
 
+// Collect collects metrics and stores them.
 func (m *MetricsCollectionService) Collect() error {
 	m.logger.DebugContext(context.Background(), "collecting metrics...")
 
@@ -92,6 +95,7 @@ func (m *MetricsCollectionService) Collect() error {
 	return nil
 }
 
+// Send returns all metrics.
 func (m *MetricsCollectionService) Send(serverAddr string) error {
 	url := fmt.Sprintf("http://%s/updates/", serverAddr)
 	ctx := context.Background()
@@ -136,8 +140,10 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 	return nil
 }
 
+// ErrJSONMarshal is an error that occurs when the metrics cannot be marshaled to JSON.
 var ErrJSONMarshal = errors.New("failed to marshal to JSON")
 
+// publishMetric publishes the metrics to the server.
 func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 	contentType string, metrics []entities.Metrics) error {
 	mJSONStruct, err := json.Marshal(metrics)

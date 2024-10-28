@@ -23,6 +23,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// ErrUnknownMetric is an error indicating that an unknown metric type was encountered.
 var ErrUnknownMetric = errors.New("unknown metric type")
 
 const bodyKey = "body"
@@ -201,6 +202,19 @@ func (sh *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) 
 
 // getJSONMetricValue retrieves a metric's value in JSON format.
 // It responds with the metric data or an error if the retrieval fails.
+// //nolint:godot // this comment is part of the Swagger documentation
+// Get Metric Value in JSON
+// @Tags Metrics
+// @Summary Retrieve a metric's value in JSON format
+// @ID getJSONMetricValue
+// @Accept  json
+// @Produce json
+// @Param metric body entities.Metrics true "Metric Data"
+// @Success 200 {object} entities.Metrics "Metric value returned successfully"
+// @Failure 400 {string} string "Bad Request - Invalid metric data"
+// @Failure 404 {string} string "Not Found - Metric not found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /value/ [get]
 func (sh *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Request) {
 	metric := entities.Metrics{}
 	body, err := io.ReadAll(r.Body)
@@ -263,6 +277,23 @@ func (sh *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// getMetric retrieves a metric from the storage.
+// It returns the metric or an error if the retrieval fails.
+// It returns an error if the metric type is unknown.
+// //nolint:godot // this comment is part of the Swagger documentation
+// Get Metric Value
+// @Tags Metrics
+// @Summary Retrieve a metric's value
+// @ID getMetricValue
+// @Accept  json
+// @Produce json
+// @Param metric body entities.Metrics true "Metric Data"
+// @Success 200 {object} entities.Metrics "Metric value returned successfully"
+// @Failure
+// @Failure 400 {string} string "Bad Request - Invalid metric data"
+// @Failure 404 {string} string "Not Found - Metric not found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /value/ [get]
 func (sh *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, error) {
 	if entities.MetricType(metric.MType) == entities.CounterMetricName {
 		record, err := sh.services.MetricsService.Get(entities.MetricName(metric.ID), entities.MetricType(metric.MType))
@@ -293,6 +324,18 @@ func (sh *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, 
 	return nil, ErrUnknownMetric
 }
 
+// handleDBPing handles the DB ping request.
+// It responds with an error if the ping fails.
+// //nolint:godot // this comment is part of the Swagger documentation
+// Ping DB
+// @Tags Metrics
+// @Summary Ping the DB
+// @ID pingDB
+// @Accept  json
+// @Produce json
+// @Success 200 {string} string "OK"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /ping [get]
 func (sh *ServerHandler) handleDBPing(w http.ResponseWriter, r *http.Request) {
 	if err := sh.db.Ping(r.Context()); err != nil {
 		sh.logger.ErrorContext(r.Context(),
