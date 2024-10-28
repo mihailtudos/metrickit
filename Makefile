@@ -1,5 +1,27 @@
+VERSION?=1.0.0
+COMMIT=$(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"N/A")
+DATE=$(shell date "+%Y/%m/%d %H:%M:%S")
 ARGS := "-a=localhost:8080"
 
+mock:
+	mockgen -destination=internal/mocks/mock_system_service.go -package=mocks metrics/internal/core/service Pinger	
+	mockgen -destination=internal/mocks/mock_db_store.go -package=mocks metrics/internal/core/service Store	
+
+docs:
+	godoc -http=:8000 -goroot=$(shell pwd)
+
+docs/gen:
+	wget -r -np -nH -N -E -p -P ./docs -k http://localhost:8080/pkg/github.com/mihailtudos/metrickit/
+
+docs/show:
+	godoc -goroot="." -http=:8080
+
+swag:
+	swag init -g ./cmd/server/main.go --output ./docs/swagger
+
+swag/gen:
+	swag init --generalInfo ./cmd/server/main.go --parseInternal   --output ./swagger/
+	
 run/server:
 	go run ./cmd/server/. -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 

@@ -33,3 +33,9 @@ func TestErrAttr(t *testing.T) {
 		})
 	}
 }
+
+func ExampleErrAttr() {
+	err := errors.New("example error")
+	attr := ErrAttr(err)
+	slog.Info("example error", attr)
+}
