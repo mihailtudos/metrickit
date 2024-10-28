@@ -1,4 +1,3 @@
-// Package handlers provides HTTP handlers for the application.
 package handlers
 
 import (
@@ -31,6 +30,8 @@ const bodyKey = "body"
 //go:embed templates
 var templatesFs embed.FS
 
+// ServerHandler is a struct that encapsulates the services, logger,
+// database connection, and template filesystem for handling HTTP requests.
 type ServerHandler struct {
 	services    *server.Service
 	logger      *slog.Logger
@@ -39,6 +40,8 @@ type ServerHandler struct {
 	secret      string
 }
 
+// NewHandler initializes a new ServerHandler and registers the application routes.
+// It takes services, logger, database connection, and a secret key as parameters.
 func NewHandler(services *server.Service, logger *slog.Logger,
 	conn *pgxpool.Pool, secret string) http.Handler {
 	handlers := &ServerHandler{
@@ -52,6 +55,8 @@ func NewHandler(services *server.Service, logger *slog.Logger,
 	return handlers.registerRoutes()
 }
 
+// registerRoutes sets up the HTTP routes for the application.
+// It returns an http.Handler with the configured routes.
 func (sh *ServerHandler) registerRoutes() http.Handler {
 	mux := chi.NewMux()
 
@@ -91,6 +96,8 @@ func (sh *ServerHandler) registerRoutes() http.Handler {
 	return mux
 }
 
+// showMetrics displays collected metrics in an HTML format.
+// It responds with an HTML page containing the metrics or an error if the retrieval fails.
 // //nolint:godot // this comment is part of the Swagger documentation
 // Show Metrics
 // @Tags Metrics
@@ -132,6 +139,9 @@ func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getMetricValue retrieves the value of a specific metric type and name.
+// It responds with the metric value or an error if the metric is not found or
+// the type is unknown.
 // //nolint:godot // this comment is part of the Swagger documentation
 // Get Metric Value
 // @Tags Metrics
@@ -189,6 +199,8 @@ func (sh *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// getJSONMetricValue retrieves a metric's value in JSON format.
+// It responds with the metric data or an error if the retrieval fails.
 func (sh *ServerHandler) getJSONMetricValue(w http.ResponseWriter, r *http.Request) {
 	metric := entities.Metrics{}
 	body, err := io.ReadAll(r.Body)
