@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"testing"
@@ -37,5 +38,9 @@ func TestErrAttr(t *testing.T) {
 func ExampleErrAttr() {
 	err := errors.New("example error")
 	attr := ErrAttr(err)
-	slog.Info("example error", attr)
+	logger := slog.Default()
+	logger.InfoContext(context.Background(), "example error", attr)
+
+	// Output:
+	// {"level":"INFO","msg":"example error","error":"example error"}
 }

@@ -1,3 +1,4 @@
+// Package handlers provides HTTP handlers for the application.
 package handlers
 
 import (
@@ -90,8 +91,9 @@ func (sh *ServerHandler) registerRoutes() http.Handler {
 	return mux
 }
 
+// //nolint:godot // this comment is part of the Swagger documentation
 // Show Metrics
-// @Tags Info
+// @Tags Metrics
 // @Summary Show collected metrics
 // @ID infoMetrics
 // @Accept json
@@ -130,6 +132,7 @@ func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// //nolint:godot // this comment is part of the Swagger documentation
 // Get Metric Value
 // @Tags Metrics
 // @Summary Retrieve a metric's value by type and name

@@ -22,21 +22,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+//nolint:godot // this comment is part of the Swagger documentation
+// @BasePath  /
 // @Title Metrics API
 // @Description Metrics service for monitoring, retrieving, and managing metric data.
 // This API allows for querying the values of various metrics and supports updating metric values.
 // @Version 1.0
-// @Contact.email support@example.com
-
+// @Contact.email support@example.com.
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-
 // @host      localhost:8080
 // @BasePath  /
-
 // @Tag.name Info
 // @Tag.description "Endpoints for retrieving the status and information of the service."
-
 // @Tag.name Metric Storage
 // @Tag.description "Endpoints for managing and accessing metric data stored in the service."
 
@@ -79,7 +77,7 @@ func main() {
 }
 
 func (app *ServerApp) run(ctx context.Context) error {
-	app.logger.DebugContext(ctx, "provided config",
+	app.logger.DebugContext(ctx, "provided_config",
 		slog.String("ServerAddress", app.cfg.Envs.Address),
 		slog.String("StorePath", app.cfg.Envs.StorePath),
 		slog.String("LogLevel", app.cfg.Envs.LogLevel),

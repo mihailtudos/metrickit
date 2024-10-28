@@ -4,16 +4,16 @@
         "description": "Metrics service for monitoring, retrieving, and managing metric data.",
         "title": "Metrics API",
         "contact": {
-            "email": "support@example.com"
+            "email": "support@example.com."
         },
         "license": {
             "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html."
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
-    "basePath": "/",
+    "host": "localhost:8080.",
+    "basePath": "/.",
     "paths": {
         "/": {
             "get": {

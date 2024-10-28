@@ -1,5 +1,6 @@
-// Модуль agent повторяет операцию до тех пор, пока она не завершится успешно.
-// Задержка между повторами ограничивается сверху и снизу и вычисляется по формуле:
+// Package agent - responsible for running the agent
+//
+// It handles the agent's main logic and configuration.
 package agent
 
 import (
@@ -18,7 +19,7 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
-// RunAgent - creates a new agent with the provided config
+// RunAgent - creates a new agent with the provided config.
 func RunAgent(agentCfg *config.AgentEnvs) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

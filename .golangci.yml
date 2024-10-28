@@ -368,7 +368,7 @@ linters-settings:
     # Enforce a single key naming convention.
     # Values: snake, kebab, camel, pascal
     # Default: ""
-    key-naming-case: snake
+    # key-naming-case: ""
     # Enforce putting arguments on separate lines.
     args-on-sep-lines: false
 
