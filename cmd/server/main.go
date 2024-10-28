@@ -38,7 +38,7 @@ import (
 // @Tag.name Metric Storage
 // @Tag.description "Endpoints for managing and accessing metric data stored in the service."
 
-// ServerApp holds the required dependecies for the metrics service 
+// ServerApp holds the required dependecies for the metrics service.
 type ServerApp struct {
 	logger *slog.Logger
 	db     *pgxpool.Pool
@@ -46,7 +46,7 @@ type ServerApp struct {
 }
 
 func main() {
-	// appConfig - holds a pointer to the server configurations 
+	// appConfig - holds a pointer to the server configurations
 	appConfig, err := config.NewServerConfig()
 	if err != nil {
 		log.Fatal("failed to initiate server config: " + err.Error())
@@ -61,7 +61,7 @@ func main() {
 	// building the server
 	app := ServerApp{logger: newLogger, cfg: appConfig}
 
-	// initializing a DB conn pool if the DSN was provided 
+	// initializing a DB conn pool if the DSN was provided
 	ctx := context.Background()
 	if app.cfg.Envs.D3SN != "" {
 		db, err := database.InitPostgresDB(ctx, app.cfg.Envs.D3SN, app.logger)
@@ -73,7 +73,7 @@ func main() {
 		app.db = db
 	}
 
-	// running the server in the main thread 
+	// running the server in the main thread
 	if err = app.run(ctx); err != nil {
 		app.logger.ErrorContext(context.Background(),
 			"failed to run the server",
