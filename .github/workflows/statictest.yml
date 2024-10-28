@@ -5,14 +5,13 @@ on:
     push:
         branches:
             - main
-
 jobs:
     statictest:
         runs-on: ubuntu-latest
-        container: golang:1.21
+        container: golang:1.23.2
         steps:
             - name: Checkout code
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
 
             - name: Download statictest binary
               uses: robinraju/release-downloader@v1.8
