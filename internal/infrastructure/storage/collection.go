@@ -89,11 +89,14 @@ func (m *MetricsCollection) GetCounterMetric(mName entities.MetricName) (entitie
 	}
 
 	val := int64(v)
-	return entities.Metrics{ID: string(mName), MType: string(entities.CounterMetricName), Delta: &val}, nil // Return the metric.
+	return entities.Metrics{ID: string(mName),
+		MType: string(entities.CounterMetricName),
+		Delta: &val}, nil // Return the metric.
 }
 
 // GetGaugeCollection retrieves a copy of the gauge metrics collection.
-func (m *MetricsCollection) GetGaugeCollection() (map[entities.MetricName]entities.Gauge, error) {
+func (m *MetricsCollection) GetGaugeCollection() (
+	map[entities.MetricName]entities.Gauge, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

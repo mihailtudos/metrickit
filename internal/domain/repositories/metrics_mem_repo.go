@@ -67,7 +67,8 @@ func (cmr *MetricsMemRepository) GetAll() (*storage.MetricsStorage, error) {
 // GetAllByType retrieves all metrics of a specific type from the repository.
 // It returns a map of metric names to their corresponding metrics or an error
 // if retrieval fails.
-func (cmr *MetricsMemRepository) GetAllByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error) {
+func (cmr *MetricsMemRepository) GetAllByType(mType entities.MetricType) (
+	map[entities.MetricName]entities.Metrics, error) {
 	metrics, err := cmr.store.GetAllRecordsByType(mType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the metrics: %w", err)

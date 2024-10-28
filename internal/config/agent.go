@@ -34,12 +34,18 @@ type AgentEnvs struct {
 
 // envAgentConfig is a struct for parsing environment variables into agent configuration settings.
 type envAgentConfig struct {
-	ServerAddr     string `env:"ADDRESS"`         // Server address, configurable via environment variable "ADDRESS".
-	LogLevel       string `env:"LOG_LEVEL"`       // Logging level, configurable via environment variable "LOG_LEVEL".
-	Key            string `env:"KEY"`             // Secret key, configurable via environment variable "KEY".
-	PollInterval   int    `env:"POLL_INTERVAL"`   // Polling interval in seconds, configurable via environment variable "POLL_INTERVAL".
-	ReportInterval int    `env:"REPORT_INTERVAL"` // Reporting interval in seconds, configurable via environment variable "REPORT_INTERVAL".
-	RateLimit      int    `env:"RATE_LIMIT"`      // Rate limit, configurable via environment variable "RATE_LIMIT".
+	ServerAddr string `env:"ADDRESS"`
+	// Server address, configurable via environment variable "ADDRESS".
+	LogLevel string `env:"LOG_LEVEL"`
+	// Logging level, configurable via environment variable "LOG_LEVEL".
+	Key string `env:"KEY"`
+	// Secret key, configurable via environment variable "KEY".
+	PollInterval int `env:"POLL_INTERVAL"`
+	// Polling interval in seconds, configurable via environment variable "POLL_INTERVAL".
+	ReportInterval int `env:"REPORT_INTERVAL"`
+	// Reporting interval in seconds, configurable via environment variable "REPORT_INTERVAL".
+	RateLimit int `env:"RATE_LIMIT"`
+	// Rate limit, configurable via environment variable "RATE_LIMIT".
 }
 
 // NewAgentConfig creates a new AgentEnvs instance by parsing environment variables
@@ -88,12 +94,23 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	}
 
 	// Command-line flags override default values and environment variables.
-	flag.StringVar(&envConfig.LogLevel, "ll", envConfig.LogLevel, "log level")
-	flag.StringVar(&envConfig.ServerAddr, "a", envConfig.ServerAddr, "server address - usage: ADDRESS:PORT")
-	flag.StringVar(&envConfig.Key, "k", envConfig.Key, "sets the secret key used for signing data")
-	flag.IntVar(&envConfig.PollInterval, "p", envConfig.PollInterval, "sets the frequency of polling the metrics in seconds")
-	flag.IntVar(&envConfig.ReportInterval, "r", envConfig.ReportInterval, "sets the frequency of sending metrics to the server in seconds")
-	flag.IntVar(&envConfig.RateLimit, "l", envConfig.RateLimit, "rate limit, max goroutines to run at a time")
+	flag.StringVar(&envConfig.LogLevel, "ll",
+		envConfig.LogLevel, "log level")
+	flag.StringVar(&envConfig.ServerAddr, "a",
+		envConfig.ServerAddr, "server address - usage: ADDRESS:PORT")
+	flag.StringVar(&envConfig.Key, "k",
+		envConfig.Key,
+		"sets the secret key used for signing data")
+	flag.IntVar(&envConfig.PollInterval, "p",
+		envConfig.PollInterval,
+		"sets the frequency of polling the metrics in seconds")
+	flag.IntVar(
+		&envConfig.ReportInterval, "r",
+		envConfig.ReportInterval,
+		"sets the frequency of sending metrics to the server in seconds")
+	flag.IntVar(&envConfig.RateLimit, "l",
+		envConfig.RateLimit,
+		"rate limit, max goroutines to run at a time")
 
 	flag.Parse()
 
