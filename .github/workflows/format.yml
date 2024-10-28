@@ -12,13 +12,16 @@ jobs:
             - name: Set up Go
               uses: actions/setup-go@v5
               with:
-                  go-version: 'stable'
-
+                  go-version: '1.23.2'
             - name: Check formatting
               run: |
-                echo "Running gofmt..."
-                gofmt -l .
-                if ! gofmt -l . | grep .; then
-                    echo "Code is not properly formatted. Please run 'gofmt -w .' locally and commit the changes."
-                    exit 1
-                fi
+                  echo "Running gofmt..."
+                  UNFORMATTED_FILES=$(gofmt -l .)
+                  if [ -n "$UNFORMATTED_FILES" ]; then
+                      echo "The following files are not properly formatted:"
+                      echo "$UNFORMATTED_FILES"
+                      echo "Please run 'gofmt -w .' locally and commit the changes."
+                      exit 1
+                  else
+                      echo "All files are properly formatted."
+                  fi
