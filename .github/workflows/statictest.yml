@@ -12,7 +12,14 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
-
+            - name: Check Go version
+              run: go version
+            - name: Tidy Go modules
+              run: go mod tidy
+            - uses: actions/setup-go@v5
+              with:
+                go-version: '1.23.2'
+                cache: false
             - name: Download statictest binary
               uses: robinraju/release-downloader@v1.8
               with:
