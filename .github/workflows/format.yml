@@ -14,6 +14,9 @@ jobs:
               with:
                   go-version: '1.23.1'
 
-            - name: Run go fmt
+            - name: Check formatting
               run: |
-                  gofmt -w .
+                  if ! gofmt -l . | grep .; then
+                    echo "Code is not properly formatted. Please run 'gofmt -w .' locally and commit the changes."
+                    exit 1
+                  fi
