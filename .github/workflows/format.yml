@@ -15,7 +15,7 @@ jobs:
                   go-version: 'stable'
 
             - name: Check formatting
-            run: |
+              run: |
                 echo "Running gofmt..."
                 gofmt -l .
                 if ! gofmt -l . | grep .; then
