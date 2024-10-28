@@ -15,8 +15,10 @@ jobs:
                   go-version: 'stable'
 
             - name: Check formatting
-              run: |
-                  if ! gofmt -l . | grep .; then
+            run: |
+                echo "Running gofmt..."
+                gofmt -l .
+                if ! gofmt -l . | grep .; then
                     echo "Code is not properly formatted. Please run 'gofmt -w .' locally and commit the changes."
                     exit 1
-                  fi
+                fi
