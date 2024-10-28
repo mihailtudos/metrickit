@@ -326,7 +326,6 @@ func (sh *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, 
 
 // handleDBPing handles the DB ping request.
 // It responds with an error if the ping fails.
-// //nolint:godot // this comment is part of the Swagger documentation
 // Ping DB
 // @Tags Metrics
 // @Summary Ping the DB
@@ -336,6 +335,8 @@ func (sh *ServerHandler) getMetric(metric entities.Metrics) (*entities.Metrics, 
 // @Success 200 {string} string "OK"
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /ping [get]
+//
+//nolint:godot // this comment is part of the Swagger documentation
 func (sh *ServerHandler) handleDBPing(w http.ResponseWriter, r *http.Request) {
 	if err := sh.db.Ping(r.Context()); err != nil {
 		sh.logger.ErrorContext(r.Context(),
