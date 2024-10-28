@@ -1,0 +1,61 @@
+info:
+  contact: {}
+paths:
+  /:
+    get:
+      consumes:
+      - application/json
+      operationId: infoMetrics
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML response with the collected metrics
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Show collected metrics
+      tags:
+      - Info
+  /value/{metricType}/{metricName}:
+    get:
+      consumes:
+      - application/json
+      operationId: getMetricValue
+      parameters:
+      - description: Metric Type
+        in: path
+        name: metricType
+        required: true
+        type: string
+      - description: Metric Name
+        in: path
+        name: metricName
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Metric value returned successfully
+          schema:
+            type: string
+        "400":
+          description: Bad Request - Unknown metric type
+          schema:
+            type: string
+        "404":
+          description: Not Found - Metric not found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Retrieve a metric's value by type and name
+      tags:
+      - Metrics
+swagger: "2.0"

@@ -1,3 +1,4 @@
+// Module: agent
 package agent
 
 import (
@@ -16,6 +17,7 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
+// RunAgent - creates a new agent with the provided config
 func RunAgent(agentCfg *config.AgentEnvs) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

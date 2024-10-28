@@ -25,6 +25,21 @@ show/pprof-res:
 show/pprof-diff:
 	pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
 
+mock:
+	mockgen -destination=internal/mocks/mock_system_service.go -package=mocks metrics/internal/core/service Pinger	
+	mockgen -destination=internal/mocks/mock_db_store.go -package=mocks metrics/internal/core/service Store	
+
+docs:
+	godoc -http=:8000 -goroot=$(shell pwd)
+
+docs/gen:
+	wget -r -np -nH -N -E -p -P ./docs -k http://localhost:8080/pkg/github.com/mihailtudos/metrickit/
+
+docs/show:
+	godoc -goroot="." -http=:8080
+
+swag/gen:
+	swag init --generalInfo ./cmd/server/main.go --parseInternal   --output ./swagger/
 
 gci/report:
 	cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json

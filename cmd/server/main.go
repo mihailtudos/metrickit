@@ -22,6 +22,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// @Title Metrics API
+// @Description Metrics service for monitoring, retrieving, and managing metric data.
+// This API allows for querying the values of various metrics and supports updating metric values.
+// @Version 1.0
+// @Contact.email support@example.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /
+
+// @Tag.name Info
+// @Tag.description "Endpoints for retrieving the status and information of the service."
+
+// @Tag.name Metric Storage
+// @Tag.description "Endpoints for managing and accessing metric data stored in the service."
 type ServerApp struct {
 	logger *slog.Logger
 	db     *pgxpool.Pool

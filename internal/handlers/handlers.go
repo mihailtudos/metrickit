@@ -19,6 +19,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/mihailtudos/metrickit/swagger"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 var ErrUnknownMetric = errors.New("unknown metric type")
@@ -81,9 +83,22 @@ func (sh *ServerHandler) registerRoutes() http.Handler {
 	mux.Get("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 	mux.Handle("/debug/pprof/{profile}", http.HandlerFunc(pprof.Index))
 
+	// Serve Swagger documentation and Swagger UI
+	mux.Handle("/swagger/*", http.StripPrefix("/swagger/", http.FileServer(http.Dir("./swagger"))))
+	mux.Get("/swagger-ui/*", httpSwagger.WrapHandler)
+
 	return mux
 }
 
+// Show Metrics
+// @Tags Info
+// @Summary Show collected metrics
+// @ID infoMetrics
+// @Accept json
+// @Produce text/html
+// @Success 200 {string} string "HTML response with the collected metrics"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router / [get]
 func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFS(sh.TemplatesFs, "templates/index.html")
 	if err != nil {
@@ -115,6 +130,19 @@ func (sh *ServerHandler) showMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Get Metric Value
+// @Tags Metrics
+// @Summary Retrieve a metric's value by type and name
+// @ID getMetricValue
+// @Accept  json
+// @Produce text/plain
+// @Param metricType path string true "Metric Type" Enum("counter", "gauge")
+// @Param metricName path string true "Metric Name"
+// @Success 200 {string} string "Metric value returned successfully"
+// @Failure 400 {string} string "Bad Request - Unknown metric type"
+// @Failure 404 {string} string "Not Found - Metric not found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /value/{metricType}/{metricName} [get]
 func (sh *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
