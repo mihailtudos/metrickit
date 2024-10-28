@@ -1,4 +1,4 @@
 package helpers
 
-// Constants for HTTP headers.
+// ContentType is a constant representing the Content-Type header.
 const ContentType = "Content-Type"
