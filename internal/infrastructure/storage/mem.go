@@ -152,7 +152,7 @@ func (ms *MemStorage) GetAllRecords() (*MetricsStorage, error) {
 
 func (ms *MemStorage) GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics,
 	error) {
-	ms.mu.Lock()
+ms.mu.Lock()
 	defer ms.mu.Unlock()
 	copyCounterMap := make(map[entities.MetricName]entities.Metrics)
 
@@ -170,7 +170,7 @@ func (ms *MemStorage) GetAllRecordsByType(mType entities.MetricType) (map[entiti
 	}
 
 	return copyCounterMap, nil
-}
+} 
 
 func (ms *MemStorage) StoreMetricsBatch(metrics []entities.Metrics) error {
 	ms.mu.Lock()
