@@ -1,3 +1,7 @@
+/*
+Package storage provides functionality for storing and retrieving metrics in a PostgreSQL database.
+It defines a DBStore struct that implements methods to create, read, and manage metrics data.
+*/
 package storage
 
 import (
@@ -8,18 +12,21 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/mihailtudos/metrickit/internal/domain/entities"
-	"github.com/mihailtudos/metrickit/pkg/helpers"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mihailtudos/metrickit/internal/domain/entities"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
+// DBStore is a struct that provides methods for interacting with a PostgreSQL database to store and retrieve metrics.
 type DBStore struct {
-	db     *pgxpool.Pool
-	logger *slog.Logger
+	db     *pgxpool.Pool // PostgreSQL connection pool
+	logger *slog.Logger  // Logger for logging operations
 }
 
+// NewPostgresStorage creates a new DBStore instance and initializes the database schema.
+// It takes a pgxpool.Pool for database connections and a logger for logging.
+// Returns a pointer to the DBStore and an error if the initialization fails.
 func NewPostgresStorage(db *pgxpool.Pool, logger *slog.Logger) (*DBStore, error) {
 	dbs := &DBStore{
 		db:     db,
@@ -33,6 +40,9 @@ func NewPostgresStorage(db *pgxpool.Pool, logger *slog.Logger) (*DBStore, error)
 	return dbs, nil
 }
 
+// CreateRecord inserts a new metric record into the database or updates an existing one.
+// It accepts an entities.Metrics object containing the metric data.
+// Returns an error if the operation fails.
 func (ds *DBStore) CreateRecord(metric entities.Metrics) error {
 	var err error
 	ctx := context.Background()
@@ -58,6 +68,8 @@ func (ds *DBStore) CreateRecord(metric entities.Metrics) error {
 	return nil
 }
 
+// GetRecord retrieves a metric record by its name and type from the database.
+// It returns the corresponding entities.Metrics object and an error if the record is not found or another issue occurs.
 func (ds *DBStore) GetRecord(mName entities.MetricName, mType entities.MetricType) (entities.Metrics, error) {
 	var metrics entities.Metrics
 	var err error
@@ -88,6 +100,8 @@ func (ds *DBStore) GetRecord(mName entities.MetricName, mType entities.MetricTyp
 	return metrics, nil
 }
 
+// GetAllRecords retrieves all metric records from the database and returns them as a MetricsStorage object.
+// It includes both gauge and counter metrics.
 func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 	ctx := context.Background()
 	metricsStorage := &MetricsStorage{
@@ -95,6 +109,7 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 		Gauge:   make(map[entities.MetricName]entities.Gauge),
 	}
 
+	// Retrieve all gauge metrics
 	rows, err := ds.db.Query(ctx, `
 		SELECT name, value FROM gauge_metrics
 	`)
@@ -117,6 +132,7 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 		return nil, fmt.Errorf("reading gauge db row error %w", err)
 	}
 
+	// Retrieve all counter metrics
 	rows, err = ds.db.Query(ctx, `
 		SELECT name, value FROM counter_metrics
 	`)
@@ -141,6 +157,8 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 	return metricsStorage, nil
 }
 
+// GetAllRecordsByType retrieves all metric records of a specific type (gauge or counter) from the database.
+// It returns a map of entities.Metrics indexed by metric names and an error if the operation fails.
 func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.MetricName]entities.Metrics, error) {
 	ctx := context.Background()
 	metricsMap := make(map[entities.MetricName]entities.Metrics)
@@ -165,6 +183,7 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 	}
 	defer rows.Close()
 
+	// Scan the results based on the metric type
 	switch mType {
 	case entities.CounterMetricName:
 		for rows.Next() {
@@ -201,6 +220,8 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 	return metricsMap, nil
 }
 
+// Close shuts down the database connection pool and logs the action.
+// It accepts a context for logging and returns an error if the shutdown fails.
 func (ds *DBStore) Close(ctx context.Context) error {
 	ds.logger.DebugContext(ctx,
 		"shutting down the db connection pool")
@@ -208,6 +229,9 @@ func (ds *DBStore) Close(ctx context.Context) error {
 	return nil
 }
 
+// createScheme initializes the database schema by creating necessary tables for metrics storage.
+// It is called during the initialization of the DBStore.
+// Returns an error if the schema creation fails.
 func (ds *DBStore) createScheme(ctx context.Context) error {
 	trx, err := ds.db.Begin(ctx)
 	if err != nil {
@@ -262,6 +286,9 @@ func (ds *DBStore) createScheme(ctx context.Context) error {
 	return nil
 }
 
+// createCounterMetric creates or updates a counter metric in the database.
+// If the metric already exists, its value is updated by adding the new delta.
+// If the metric does not exist, it is created with the provided delta value.
 func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metrics) error {
 	existingMetric, err := ds.GetRecord(entities.MetricName(metric.ID), entities.MetricType(metric.MType))
 	if err != nil && !errors.Is(err, ErrNotFound) {
@@ -293,6 +320,10 @@ func (ds *DBStore) createCounterMetric(ctx context.Context, metric entities.Metr
 	return nil
 }
 
+// StoreMetricsBatch stores a batch of metrics in the database.
+// It separates metrics into counters and gauges, processing them accordingly.
+// Counter metrics are summed if they already exist, while gauge metrics
+// only store the latest value.
 func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
 	counterMetrics := make(map[string]entities.Metrics)
 	gaugeMetrics := make(map[string]entities.Metrics)
@@ -350,6 +381,9 @@ func (ds *DBStore) StoreMetricsBatch(metrics []entities.Metrics) error {
 	return nil
 }
 
+// storeBatchMetrics stores a batch of metrics in the database within a transaction.
+// It constructs and executes the necessary SQL statements to insert or update
+// counter and gauge metrics.
 func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Metrics) error {
 	tx, err := ds.db.Begin(ctx)
 	if err != nil {

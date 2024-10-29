@@ -16,10 +16,25 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
+// formatBodyMessageErrors formats and returns an error message for body reading errors.
 func formatBodyMessageErrors(err error) error {
 	return fmt.Errorf("error reading body: %w", err)
 }
 
+// handleUploads handles metric uploads, validating and storing them based on their type.
+// //nolint:godot // this comment is part of the Swagger documentation
+// @Summary Upload a metric
+// @Description Uploads a metric of type gauge or counter. Returns status OK if successful.
+// @Tags metrics
+// @Accept text/plain
+// @Produce text/plain
+// @Param metricType path string true "Type of metric (counter/gauge)"
+// @Param metricName path string true "Name of the metric"
+// @Param metricValue path string true "Value of the metric"
+// @Success 200 {string} string "Metric uploaded successfully"
+// @Failure 400 {string} string "Invalid request"
+// @Failure 404 {string} string "Metric type not found"
+// @Router /upload/{metricType}/{metricName}/{metricValue} [post]
 func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
@@ -84,6 +99,18 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleBatchUploads handles batch metric uploads, validating the metrics and storing them.
+// //nolint:godot // this comment is part of the Swagger documentation
+// @Summary Upload a batch of metrics
+// @Description Uploads multiple metrics in a single request. Returns status OK if successful.
+// @Tags metrics
+// @Accept application/json
+// @Produce application/json
+// @Param body []entities.Metrics true "List of metrics"
+// @Success 200 {string} string "Metrics uploaded successfully"
+// @Failure 400 {string} string "Invalid request"
+// @Failure 404 {string} string "Metric type not found"
+// @Router /upload/batch [post]
 func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Request) {
 	metrics := make([]entities.Metrics, 0)
 	body, err := io.ReadAll(r.Body)
@@ -101,7 +128,7 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 	}()
 
 	if sh.secret != "" {
-		if !sh.isBodyValid(body, r.Header.Get("HashSHA256")) {
+		if !isBodyValid(body, r.Header.Get("HashSHA256"), sh.secret) {
 			sh.logger.DebugContext(r.Context(),
 				"request body failed integrity check")
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -118,6 +145,17 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 			slog.String(bodyKey, string(body)))
 		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Validate each metric type
+	for _, metric := range metrics {
+		if !isValidMetricType(metric.MType) {
+			sh.logger.DebugContext(r.Context(),
+				"unsupported metric type",
+				slog.String("metric_type", metric.MType))
+			http.Error(w, "Unsupported metric type", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	sh.logger.DebugContext(r.Context(),
@@ -137,6 +175,18 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleJSONUploads handles JSON metric uploads, validating and storing them.
+// //nolint:godot // this comment is part of the Swagger documentation
+// @Summary Upload a JSON metric
+// @Description Uploads a single metric in JSON format. Returns status OK if successful.
+// @Tags metrics
+// @Accept application/json
+// @Produce application/json
+// @Param body entities.Metrics true "Metric"
+// @Success 200 {object} entities.Metrics "Metric uploaded successfully"
+// @Failure 400 {string} string "Invalid request"
+// @Failure 404 {string} string "Metric type not found"
+// @Router /upload/json [post]
 func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Request) {
 	metric := entities.Metrics{}
 	body, err := io.ReadAll(r.Body)
@@ -153,12 +203,12 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 		}
 	}()
 
-	err = json.Unmarshal(body, &metric)
-	if err != nil {
+	// Handle JSON unmarshal error
+	if err = json.Unmarshal(body, &metric); err != nil {
 		sh.logger.DebugContext(r.Context(),
 			"failed to unmarshal the request",
 			slog.String(bodyKey, string(body)))
-		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusBadRequest)
+		http.Error(w, formatBodyMessageErrors(err).Error(), http.StatusBadRequest) // Changed to 400
 		return
 	}
 
@@ -239,6 +289,9 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// isMetricNameAndValuePresent checks if the metric has a valid name and value.
+// It returns true if the metric is of type Counter and has a non-nil Delta and a non-empty ID,
+// or if the metric is of type Gauge and has a non-nil Value and a non-empty ID.
 func isMetricNameAndValuePresent(metric entities.Metrics) bool {
 	if metric.MType == string(entities.CounterMetricName) &&
 		metric.Delta != nil &&
@@ -255,6 +308,10 @@ func isMetricNameAndValuePresent(metric entities.Metrics) bool {
 	return false
 }
 
+// getResponseMetric retrieves the current value of the metric for response generation.
+// If the metric is of type Gauge, it returns the metric as is.
+// If the metric is of type Counter, it retrieves the current delta value from the MetricsService.
+// It returns the metric and any error encountered during retrieval.
 func (sh *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.Metrics, error) {
 	if entities.MetricType(metric.MType) == entities.GaugeMetricName {
 		return &metric, nil
@@ -268,16 +325,26 @@ func (sh *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.M
 	}
 }
 
-func (sh *ServerHandler) isBodyValid(data []byte, reqHash string) bool {
+// isBodyValid verifies the integrity of the request body by comparing the provided hash with a computed hash.
+// It returns true if the request hash is not empty and matches the computed hash using the provided secret.
+func isBodyValid(data []byte, reqHash, secret string) bool {
 	if reqHash == "" {
 		return false
 	}
-	hashedStr := sh.getHash(data)
+	hashedStr := getHash(data, secret)
 	return hashedStr == reqHash
 }
 
-func (sh *ServerHandler) getHash(data []byte) string {
-	hash := hmac.New(sha256.New, []byte(sh.secret))
+// getHash computes the HMAC SHA-256 hash of the provided data using the provided secret.
+// It returns the hex-encoded hash as a string.
+func getHash(data []byte, secret string) string {
+	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write(data)
 	return hex.EncodeToString(hash.Sum(nil))
+}
+
+// isValidMetricType checks if the provided metric type is valid.
+// It returns true if the metric type is either Counter or Gauge; otherwise, it returns false.
+func isValidMetricType(mType string) bool {
+	return mType == string(entities.CounterMetricName) || mType == string(entities.GaugeMetricName)
 }

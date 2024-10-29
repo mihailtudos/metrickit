@@ -1,0 +1,75 @@
+basePath: /.
+host: localhost:8080.
+info:
+  contact:
+    email: support@example.com.
+  description: Metrics service for monitoring, retrieving, and managing metric data.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html.
+  title: Metrics API
+  version: "1.0"
+paths:
+  /:
+    get:
+      consumes:
+      - application/json
+      operationId: infoMetrics
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML response with the collected metrics
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Show collected metrics
+      tags:
+      - Info
+  /value/{metricType}/{metricName}:
+    get:
+      consumes:
+      - application/json
+      operationId: getMetricValue
+      parameters:
+      - description: Metric Type
+        in: path
+        name: metricType
+        required: true
+        type: string
+      - description: Metric Name
+        in: path
+        name: metricName
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Metric value returned successfully
+          schema:
+            type: string
+        "400":
+          description: Bad Request - Unknown metric type
+          schema:
+            type: string
+        "404":
+          description: Not Found - Metric not found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Retrieve a metric's value by type and name
+      tags:
+      - Metrics
+swagger: "2.0"
+tags:
+- description: '"Endpoints for retrieving the status and information of the service."'
+  name: Info
+- description: '"Endpoints for managing and accessing metric data stored in the service."'
+  name: Metric Storage

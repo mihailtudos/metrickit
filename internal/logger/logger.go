@@ -1,3 +1,5 @@
+// Package logger provides utilities for creating and configuring a structured logger
+// using the slog library. It allows setting different log levels and output formats.
 package logger
 
 import (
@@ -8,6 +10,8 @@ import (
 	"strings"
 )
 
+// NewLogger creates a new slog.Logger instance with the specified output writer
+// and log level. It returns an error if the log level is invalid.
 func NewLogger(w io.Writer, level string) (*slog.Logger, error) {
 	ll, err := getLevel(level)
 	if err != nil {
@@ -17,6 +21,8 @@ func NewLogger(w io.Writer, level string) (*slog.Logger, error) {
 	return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: ll})), nil
 }
 
+// getLevel parses the provided log level string and returns the corresponding slog.Level.
+// It returns an error if the log level is invalid.
 func getLevel(level string) (slog.Level, error) {
 	switch strings.ToLower(level) {
 	case "debug":

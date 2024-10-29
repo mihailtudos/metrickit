@@ -1,5 +1,27 @@
+VERSION?=1.0.0
+COMMIT=$(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"N/A")
+DATE=$(shell date "+%Y/%m/%d %H:%M:%S")
 ARGS := "-a=localhost:8080"
 
+mock:
+	mockgen -destination=internal/mocks/mock_system_service.go -package=mocks metrics/internal/core/service Pinger	
+	mockgen -destination=internal/mocks/mock_db_store.go -package=mocks metrics/internal/core/service Store	
+
+docs:
+	godoc -http=:8000 -goroot=$(shell pwd)
+
+docs/gen:
+	wget -r -np -nH -N -E -p -P ./docs -k http://localhost:8080/pkg/github.com/mihailtudos/metrickit/
+
+docs/show:
+	godoc -goroot="." -http=:8080
+
+swag:
+	swag init -g ./cmd/server/main.go --output ./docs/swagger
+
+swag/gen:
+	swag init --generalInfo ./cmd/server/main.go --parseInternal   --output ./swagger/
+	
 run/server:
 	go run ./cmd/server/. -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
@@ -7,10 +29,24 @@ run/agent:
 	go run ./cmd/agent/. $(ARGS)
 
 run/tests:
-	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	go test ./... -count=1 -coverprofile ./profiles/cover.out && go tool cover -func ./profiles/cover.out
 
 show/cover:
-	go tool cover -html=profile.cov
+	go tool cover -html=./profiles/cover.out
+
+run/pprof-snap:
+	curl http://localhost:8080/debug/pprof/profile\?seconds=30 -o ./profiles/result.pprof
+
+show/pprof-base:
+	go tool pprof -http=":9090" ./profiles/base.pprof
+
+show/pprof-res:
+	go tool pprof -http=":9090" ./profiles/result.pprof
+
+show/pprof-diff:
+	pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
+
 
 gci/report:
 	cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json
@@ -144,7 +180,7 @@ _golangci-lint-run: _golangci-lint-reports-mkdir
     -v $(shell pwd):/app \
     -v $(GOLANGCI_LINT_CACHE):/root/.cache \
     -w /app \
-    golangci/golangci-lint:v1.57.2 \
+    golangci/golangci-lint:v1.61.0 \
         golangci-lint run \
             -c .golangci.yml \
 	> ./golangci-lint/report-unformatted.json

@@ -1,3 +1,9 @@
+// Package config provides configuration settings for the agent application.
+//
+// It supports configuration through environment variables, command-line flags,
+// and default settings. The package allows setting up the agent's environment
+// variables, including logging, server address, secret key, rate limits, and
+// polling intervals.
 package config
 
 import (
@@ -7,39 +13,55 @@ import (
 	"os"
 	"time"
 
-	"github.com/mihailtudos/metrickit/internal/logger"
-
 	"github.com/caarlos0/env/v11"
+	"github.com/mihailtudos/metrickit/internal/logger"
 )
 
-const defaultReportInterval = 10
-const defaultPoolInterval = 2
-const defaultRateLimit = 10
+// Default values for various configuration settings.
+const defaultReportInterval = 10 // Default interval for reporting metrics, in seconds.
+const defaultPoolInterval = 2    // Default interval for polling metrics, in seconds.
+const defaultRateLimit = 10      // Default rate limit for concurrent operations.
 
+// AgentEnvs represents the agent's runtime configuration settings.
 type AgentEnvs struct {
-	Log            *slog.Logger
-	ServerAddr     string
-	Key            string
-	RateLimit      int
-	PollInterval   time.Duration
-	ReportInterval time.Duration
+	Log            *slog.Logger  // Logger used by the agent.
+	ServerAddr     string        // Address of the server to which metrics are sent.
+	Key            string        // Secret key used for signing data.
+	RateLimit      int           // Maximum number of concurrent goroutines.
+	PollInterval   time.Duration // Interval between metric polling operations.
+	ReportInterval time.Duration // Interval between sending metrics to the server.
 }
 
+// envAgentConfig is a struct for parsing environment variables into agent configuration settings.
 type envAgentConfig struct {
-	ServerAddr     string `env:"ADDRESS"`
-	LogLevel       string `env:"LOG_LEVEL"`
-	Key            string `env:"KEY"`
-	PollInterval   int    `env:"POLL_INTERVAL"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
-	RateLimit      int    `env:"RATE_LIMIT"`
+	ServerAddr string `env:"ADDRESS"`
+	// Server address, configurable via environment variable "ADDRESS".
+	LogLevel string `env:"LOG_LEVEL"`
+	// Logging level, configurable via environment variable "LOG_LEVEL".
+	Key string `env:"KEY"`
+	// Secret key, configurable via environment variable "KEY".
+	PollInterval int `env:"POLL_INTERVAL"`
+	// Polling interval in seconds, configurable via environment variable "POLL_INTERVAL".
+	ReportInterval int `env:"REPORT_INTERVAL"`
+	// Reporting interval in seconds, configurable via environment variable "REPORT_INTERVAL".
+	RateLimit int `env:"RATE_LIMIT"`
+	// Rate limit, configurable via environment variable "RATE_LIMIT".
 }
 
+// NewAgentConfig creates a new AgentEnvs instance by parsing environment variables
+// and command-line flags. It sets up default values, overrides them with environment
+// variables if provided, and applies command-line flag values.
+//
+// Returns:
+//   - *AgentEnvs: A pointer to the populated AgentEnvs configuration.
+//   - error: An error if configuration parsing fails.
 func NewAgentConfig() (*AgentEnvs, error) {
 	envs, err := parseAgentEnvs()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent config: %w", err)
 	}
 
+	// Initialize the logger with the specified log level.
 	l, err := logger.NewLogger(os.Stdout, envs.LogLevel)
 	if err != nil {
 		return nil, fmt.Errorf("agent logger: %w", err)
@@ -55,30 +77,44 @@ func NewAgentConfig() (*AgentEnvs, error) {
 	}, nil
 }
 
+// parseAgentEnvs reads environment variables and command-line flags to populate
+// an envAgentConfig instance. It applies default values first, then overrides
+// them with environment variables, and finally with command-line flags.
+//
+// Returns:
+//   - *envAgentConfig: A pointer to the populated envAgentConfig struct.
+//   - error: An error if environment parsing fails.
 func parseAgentEnvs() (*envAgentConfig, error) {
 	envConfig := &envAgentConfig{
-		LogLevel:       defaultLogLevel,
-		PollInterval:   defaultPoolInterval,
-		ReportInterval: defaultReportInterval,
-		RateLimit:      defaultRateLimit,
-		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
+		LogLevel:       defaultLogLevel,                                   // Default log level.
+		PollInterval:   defaultPoolInterval,                               // Default polling interval.
+		ReportInterval: defaultReportInterval,                             // Default reporting interval.
+		RateLimit:      defaultRateLimit,                                  // Default rate limit.
+		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort), // Default server address.
 	}
 
-	flag.StringVar(&envConfig.LogLevel, "ll", envConfig.LogLevel,
-		"log level")
-	flag.StringVar(&envConfig.ServerAddr, "a", envConfig.ServerAddr,
-		"server address - usage: ADDRESS:PORT")
-	flag.StringVar(&envConfig.Key, "k", envConfig.Key,
+	// Command-line flags override default values and environment variables.
+	flag.StringVar(&envConfig.LogLevel, "ll",
+		envConfig.LogLevel, "log level")
+	flag.StringVar(&envConfig.ServerAddr, "a",
+		envConfig.ServerAddr, "server address - usage: ADDRESS:PORT")
+	flag.StringVar(&envConfig.Key, "k",
+		envConfig.Key,
 		"sets the secret key used for signing data")
-	flag.IntVar(&envConfig.PollInterval, "p", envConfig.PollInterval,
+	flag.IntVar(&envConfig.PollInterval, "p",
+		envConfig.PollInterval,
 		"sets the frequency of polling the metrics in seconds")
-	flag.IntVar(&envConfig.ReportInterval, "r", envConfig.ReportInterval,
+	flag.IntVar(
+		&envConfig.ReportInterval, "r",
+		envConfig.ReportInterval,
 		"sets the frequency of sending metrics to the server in seconds")
-	flag.IntVar(&envConfig.RateLimit, "l", envConfig.RateLimit,
+	flag.IntVar(&envConfig.RateLimit, "l",
+		envConfig.RateLimit,
 		"rate limit, max goroutines to run at a time")
 
 	flag.Parse()
 
+	// Parse environment variables into the envConfig struct.
 	if err := env.Parse(envConfig); err != nil {
 		return nil, fmt.Errorf("agent configs: %w", err)
 	}

@@ -9,7 +9,7 @@ main() {
 
     local status=$(cat $REPORT_FILE | jq -r '.Issues | length')
     if [ $status -ne 0 ]; then
-        echo "Исправьте проблемы, обнаруженные линтером: см. файл $REPORT_FILE"
+        echo "Fix errors in: $REPORT_FILE"
         exit 1
     fi
 }
