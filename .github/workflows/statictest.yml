@@ -1,43 +1,33 @@
 name: go vet test
 
 on:
-    pull_request:
-    push:
-        branches:
-            - main
+  pull_request:
+  push:
+    branches:
+      - main
+
 jobs:
-    statictest:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            
-            - name: Check Go version
-              run: go version
-            
-            - name: Setup Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version: '1.23.2'
-                  cache: false
-            
-            - name: Tidy Go modules
-              run: go mod tidy
-            
-            - name: Download statictest binary
-              uses: robinraju/release-downloader@v1.8
-              with:
-                  repository: Yandex-Practicum/go-autotests
-                  latest: true
-                  fileName: statictest
-                  out-file-path: .tools
-                  token: ${{ secrets.GITHUB_TOKEN }}
-            
-            - name: Setup autotest binary
-              run: |
-                  chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
-                  mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
-            
-            - name: Run statictest
-              run: |
-                  go vet -vettool=$(which statictest) ./...
+  statictest:
+    runs-on: ubuntu-latest
+    container: golang:1.22
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download statictest binary
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: Yandex-Practicum/go-autotests
+          latest: true
+          fileName: statictest
+          out-file-path: .tools
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup autotest binary
+        run: |
+          chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
+          mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
+
+      - name: Run statictest
+        run: |
+          go vet -vettool=$(which statictest) ./...
