@@ -33,7 +33,7 @@ var listOfExtraAnalyzers = []string{
 
 // AnalyzersList contains a list of Analyzer that will be applied when building the staticchecker
 type AnalyzersList struct {
-Checkers []*analysis.Analyzer
+	Checkers []*analysis.Analyzer
 }
 
 func main() {
