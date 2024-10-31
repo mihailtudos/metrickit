@@ -6,7 +6,6 @@ from various sources, including the Go tools and third-party libraries.
 package main
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 
@@ -47,7 +46,7 @@ type AnalyzersList struct {
 // and runs the multichecker with the combined analyzers.
 func main() {
 	checks := &AnalyzersList{
-		Checkers: make([]*analysis.Analyzer, len(standard)),
+		Checkers: make([]*analysis.Analyzer, 0), // Start with an empty slice
 	}
 
 	// Append standard analyzers to the checks.
@@ -62,9 +61,6 @@ func main() {
 
 	// Append additional analyzers based on the predefined list.
 	appendOtherAnalyzers(checks, listOfExtraAnalyzers)
-
-	// Print the total number of analyzers added.
-	fmt.Println(len(checks.Checkers))
 
 	// Run the multichecker with the combined list of analyzers.
 	multichecker.Main(
