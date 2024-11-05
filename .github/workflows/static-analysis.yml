@@ -33,7 +33,6 @@ jobs:
 
       - name: Run static analysis
         run: |
-          export GOCACHE=off
           staticlint ./...
         continue-on-error: false
 
