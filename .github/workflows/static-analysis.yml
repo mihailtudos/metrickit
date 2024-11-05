@@ -21,16 +21,16 @@ jobs:
           go-version: '1.22'
           cache: true
 
-      - name: Install statictest
+      - name: Install staticlint
         run: |
           # Assuming your static analyzer is in ./cmd/staticlint
-          cd cmd/statictest
-          go build -o statictest
-          sudo mv statictest /usr/local/bin/
+          cd cmd/staticlint
+          go build -o staticlint
+          sudo mv staticlint /usr/local/bin/
 
       - name: Run static analysis
         run: |
-          statictest ./...
+          staticlint ./...
         continue-on-error: false
 
       # Optional: Add a step to comment on PR with findings
