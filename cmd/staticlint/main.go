@@ -6,9 +6,10 @@ from various sources, including the Go tools and third-party libraries.
 package main
 
 import (
-	"github.com/mihailtudos/metrickit/analyzer/noexitcheckanalyzer"
 	"slices"
 	"strings"
+
+	"github.com/mihailtudos/metrickit/analyzer/noexitcheckanalyzer"
 
 	"github.com/kisielk/errcheck/errcheck"
 	"golang.org/x/tools/go/analysis"

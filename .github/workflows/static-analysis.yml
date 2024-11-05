@@ -23,7 +23,6 @@ jobs:
 
       - name: Install staticlint
         run: |
-          # Assuming your static analyzer is in ./cmd/staticlint
           cd cmd/staticlint
           go build -o staticlint
           sudo mv staticlint /usr/local/bin/

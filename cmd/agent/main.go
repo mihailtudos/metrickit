@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"log"
+
 	"github.com/mihailtudos/metrickit/internal/agent"
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
-	"log"
 )
 
 func main() {

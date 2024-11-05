@@ -8,7 +8,13 @@
 package noexitcheckanalyzer
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"go/ast"
+
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
@@ -64,6 +70,43 @@ func hasOSImport(file *ast.File) bool {
 	return false
 }
 
+// shouldSkipFile determines if a file should be skipped during analysis.
+func shouldSkipFile(filename string) bool {
+	// Skip go build cache
+	if strings.Contains(filename, filepath.Join("Library", "Caches", "go-build")) {
+		return true
+	}
+
+	// Get absolute path
+	absPath, err := filepath.Abs(filename)
+	if err == nil {
+		// Skip if it's in GOCACHE
+		goCachePath := os.Getenv("GOCACHE")
+		if goCachePath != "" && strings.HasPrefix(absPath, goCachePath) {
+			return true
+		}
+	}
+
+	// Other patterns to skip
+	skipPatterns := []string{
+		"vendor/",
+		"testdata/",
+		"_test.go",
+		"node_modules/",
+		"third_party/",
+		"generated/",
+		".git/",
+	}
+
+	for _, pattern := range skipPatterns {
+		if strings.Contains(filename, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // run implements the analysis logic for the exitinmain analyzer.
 // It traverses the AST of each file that imports "os" and looks
 // for calls to os.Exit within the main function.
@@ -79,10 +122,24 @@ func hasOSImport(file *ast.File) bool {
 //   - interface{}: Always returns nil as this analyzer doesn't produce results for other analyzers
 //   - error: Returns an error if the analysis fails, nil otherwise
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspectResult, ok := pass.ResultOf[inspect.Analyzer]
+	if !ok {
+		return nil, errors.New("inspect analyzer result not found")
+	}
+
+	ins, ok := inspectResult.(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("inspect analyzer result is not of type *inspector.Inspector")
+	}
 
 	// Iterate through each file in the package
 	for _, file := range pass.Files {
+		// Get the file's path from position information
+		pos := pass.Fset.Position(file.Pos())
+		if shouldSkipFile(pos.Filename) {
+			continue
+		}
+
 		// First, check if any of the files have "os" import
 		if !hasOSImport(file) {
 			continue
@@ -93,7 +150,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			(*ast.FuncDecl)(nil),
 		}
 
-		inspect.Preorder(nodeFilter, func(n ast.Node) {
+		ins.Preorder(nodeFilter, func(n ast.Node) {
 			funcDecl, ok := n.(*ast.FuncDecl)
 			if !ok {
 				return
@@ -120,5 +177,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		})
 	}
 
+	//nolint:nilnil // it's ok to return nil
 	return nil, nil
 }
