@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/mihailtudos/metrickit/internal/utils"
 	"log"
 
 	"github.com/mihailtudos/metrickit/internal/agent"
 	"github.com/mihailtudos/metrickit/internal/config"
+	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
