@@ -73,7 +73,7 @@ func hasOSImport(file *ast.File) bool {
 // shouldSkipFile determines if a file should be skipped during analysis.
 func shouldSkipFile(filename string) bool {
 	// Skip go build cache
-	if strings.Contains(strings.ToLower(filename), filepath.Join("library", "caches", "go-build")) {
+	if strings.Contains(strings.ToLower(filename), "go-build") {
 		return true
 	}
 
