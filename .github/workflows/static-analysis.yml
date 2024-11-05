@@ -28,8 +28,12 @@ jobs:
           go build -o staticlint
           sudo mv staticlint /usr/local/bin/
 
+      - name: Clear Go build cache
+        run: go clean -cache
+
       - name: Run static analysis
         run: |
+          export GOCACHE=off
           staticlint ./...
         continue-on-error: false
 
