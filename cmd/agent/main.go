@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/mihailtudos/metrickit/internal/utils"
 	"log"
 
 	"github.com/mihailtudos/metrickit/internal/agent"
@@ -9,7 +10,16 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 func main() {
+	// Output the build information
+	utils.PrintBuildTags(buildVersion, buildDate, buildCommit)
+
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
 		agentCfg.Log.ErrorContext(context.Background(),

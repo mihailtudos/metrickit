@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mihailtudos/metrickit/internal/utils"
 	"log"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,12 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 //nolint:godot // this comment is part of the Swagger documentation
@@ -46,6 +53,9 @@ type ServerApp struct {
 }
 
 func main() {
+	// Output the build information
+	utils.PrintBuildTags(buildVersion, buildDate, buildCommit)
+
 	// appConfig - holds a pointer to the server configurations
 	appConfig, err := config.NewServerConfig()
 	if err != nil {
