@@ -1,0 +1,10 @@
+severity: error
+skip-files:
+  - "*_test.go"
+  - "vendor/*"
+exit-on-failure: true
+report-style: github
+custom-checks:
+  os-exit-in-main:
+    enabled: true
+    severity: error

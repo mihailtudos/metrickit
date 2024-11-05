@@ -64,10 +64,10 @@ func main() {
 	// initializing a DB conn pool if the DSN was provided
 	ctx := context.Background()
 	if app.cfg.Envs.D3SN != "" {
-		db, err := database.InitPostgresDB(ctx, app.cfg.Envs.D3SN, app.logger)
-		if err != nil {
-			app.logger.ErrorContext(ctx, "failed to init db", helpers.ErrAttr(err))
-			os.Exit(1)
+		db, e := database.InitPostgresDB(ctx, app.cfg.Envs.D3SN, app.logger)
+		if e != nil {
+			app.logger.ErrorContext(ctx, "failed to init db", helpers.ErrAttr(e))
+			log.Fatal("failed to init db: " + e.Error())
 		}
 
 		app.db = db

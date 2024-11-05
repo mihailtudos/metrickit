@@ -6,6 +6,7 @@ from various sources, including the Go tools and third-party libraries.
 package main
 
 import (
+	"github.com/mihailtudos/metrickit/analyzer/noexitcheckanalyzer"
 	"slices"
 	"strings"
 
@@ -26,6 +27,7 @@ var standard = []*analysis.Analyzer{
 	shadow.Analyzer,
 	structtag.Analyzer,
 	errcheck.Analyzer,
+	noexitcheckanalyzer.Analyzer,
 }
 
 // listOfExtraAnalyzers holds the names of additional analyzers that can be included.

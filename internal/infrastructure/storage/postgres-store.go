@@ -122,13 +122,13 @@ func (ds *DBStore) GetAllRecords() (*MetricsStorage, error) {
 	for rows.Next() {
 		var name string
 		var value float64
-		if err := rows.Scan(&name, &value); err != nil {
+		if err = rows.Scan(&name, &value); err != nil {
 			return nil, fmt.Errorf("failed to scan gauge record: %w", err)
 		}
 		metricsStorage.Gauge[entities.MetricName(name)] = entities.Gauge(value)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("reading gauge db row error %w", err)
 	}
 
@@ -189,7 +189,7 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 		for rows.Next() {
 			var name string
 			var delta int64
-			if err := rows.Scan(&name, &delta); err != nil {
+			if err = rows.Scan(&name, &delta); err != nil {
 				return nil, fmt.Errorf("failed to scan counter record: %w", err)
 			}
 			metricsMap[entities.MetricName(name)] = entities.Metrics{
@@ -202,7 +202,7 @@ func (ds *DBStore) GetAllRecordsByType(mType entities.MetricType) (map[entities.
 		for rows.Next() {
 			var name string
 			var value float64
-			if err := rows.Scan(&name, &value); err != nil {
+			if err = rows.Scan(&name, &value); err != nil {
 				return nil, fmt.Errorf("failed to scan gauge record: %w", err)
 			}
 			metricsMap[entities.MetricName(name)] = entities.Metrics{
@@ -390,7 +390,7 @@ func (ds *DBStore) storeBatchMetrics(ctx context.Context, metrics []entities.Met
 		return fmt.Errorf("failed to begin transaction %w", err)
 	}
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
+		if err = tx.Rollback(ctx); err != nil {
 			ds.logger.ErrorContext(ctx, "failed to rollback", helpers.ErrAttr(err))
 		}
 	}()

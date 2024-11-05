@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"os"
-
 	"github.com/mihailtudos/metrickit/internal/agent"
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+	"log"
 )
 
 func main() {
@@ -16,14 +15,14 @@ func main() {
 			"failed to get agent configurations: ",
 			helpers.ErrAttr(err),
 		)
-		os.Exit(1)
+		log.Fatal(err.Error())
 	}
 
-	if err := agent.RunAgent(agentCfg); err != nil {
+	if err = agent.RunAgent(agentCfg); err != nil {
 		agentCfg.Log.ErrorContext(context.Background(),
 			"failed to start the agent: ",
 			helpers.ErrAttr(err),
 		)
-		os.Exit(1)
+		log.Fatal(err.Error())
 	}
 }

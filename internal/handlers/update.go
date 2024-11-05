@@ -120,7 +120,7 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	defer func() {
-		if err := r.Body.Close(); err != nil {
+		if err = r.Body.Close(); err != nil {
 			sh.logger.ErrorContext(r.Context(),
 				"failed to close request body",
 				helpers.ErrAttr(err))
@@ -196,7 +196,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	defer func() {
-		if err := r.Body.Close(); err != nil {
+		if err = r.Body.Close(); err != nil {
 			sh.logger.ErrorContext(r.Context(),
 				"failed to close request body",
 				helpers.ErrAttr(err))
@@ -246,7 +246,7 @@ func (sh *ServerHandler) handleJSONUploads(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	case entities.GaugeMetricName:
-		if err := sh.services.MetricsService.Create(metric); err != nil {
+		if err = sh.services.MetricsService.Create(metric); err != nil {
 			sh.logger.ErrorContext(r.Context(),
 				"failed to create the gauge metric",
 				helpers.ErrAttr(err))
