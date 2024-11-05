@@ -1,3 +1,4 @@
+// Package a is a test package
 package a
 
 import "os"

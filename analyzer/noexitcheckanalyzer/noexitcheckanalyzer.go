@@ -90,8 +90,6 @@ func shouldSkipFile(filename string) bool {
 	// Other patterns to skip
 	skipPatterns := []string{
 		"vendor/",
-		"testdata/",
-		"_test.go",
 		"node_modules/",
 		"third_party/",
 		"generated/",
