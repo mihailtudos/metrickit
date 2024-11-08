@@ -59,7 +59,7 @@ func NewHandler(services server.Metrics, logger *slog.Logger,
 	}
 }
 
-// registerRoutes sets up the HTTP routes for the application.
+// Router sets up the HTTP routes for the application.
 // It returns an http.Handler with the configured routes.
 func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 	mux := chi.NewMux()
@@ -381,7 +381,11 @@ func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
-	sh.logger.InfoContext(r.Context(), "received metric type: ", slog.String("metric_type", metricType), slog.String("metric_name", metricName), slog.String("metric_value", metricValue))
+	sh.logger.InfoContext(r.Context(),
+		"received metric type: ",
+		slog.String("metric_type", metricType),
+		slog.String("metric_name", metricName),
+		slog.String("metric_value", metricValue))
 	// return http.StatusNotFound if metric type is not provided
 	if entities.MetricType(metricType) != entities.GaugeMetricName &&
 		entities.MetricType(metricType) != entities.CounterMetricName ||

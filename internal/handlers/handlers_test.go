@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path"
+	"strconv"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
@@ -47,6 +48,7 @@ func setupTestRouter(t *testing.T, service server.Metrics) http.Handler {
 	return Router(logger, serverHandlers)
 }
 
+//nolint:exhaustive // Ignoring exhaustive check, only testing a subset of metrics
 func TestServerHandler_showMetrics(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -105,7 +107,7 @@ func TestServerHandler_showMetrics(t *testing.T) {
 			handler := NewHandler(mockService, logger, nil, "")
 
 			// Create request
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			w := httptest.NewRecorder()
 
 			// Execute
@@ -195,7 +197,7 @@ func TestServerHandler_getMetricValue(t *testing.T) {
 			metricName: "HeapAlloc",
 			setupMock: func(m *mocks.MockMetrics) {
 				m.EXPECT().Get(entities.MetricName("HeapAlloc"), entities.GaugeMetricName).
-					Return(entities.Metrics{}, fmt.Errorf("unexpected database error"))
+					Return(entities.Metrics{}, errors.New("unexpected database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   "",
@@ -215,7 +217,7 @@ func TestServerHandler_getMetricValue(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet,
 				fmt.Sprintf("/value/%s/%s", tt.metricType, tt.metricName),
-				nil)
+				http.NoBody)
 			w := httptest.NewRecorder()
 
 			// Create chi context with URL parameters
@@ -302,7 +304,7 @@ func TestServerHandler_handleUploads(t *testing.T) {
 			router := setupTestRouter(t, serverService)
 
 			url := fmt.Sprintf("/update/%s/%s/%s", tt.metricType, tt.metricName, tt.metricValue)
-			req := httptest.NewRequest(http.MethodPost, url, nil)
+			req := httptest.NewRequest(http.MethodPost, url, http.NoBody)
 			rec := httptest.NewRecorder()
 
 			router.ServeHTTP(rec, req)
@@ -323,13 +325,15 @@ func TestServerHandler_handleUploads(t *testing.T) {
 				}
 
 				if data.Delta != nil {
-					assert.Equal(t, tt.metricValue, fmt.Sprintf("%d", *data.Delta))
+					assert.Equal(t, tt.metricValue,
+						strconv.FormatInt(*data.Delta, 10))
 				}
 			}
 		})
 	}
 }
 
+//nolint:dupl // Intentionally similar test cases
 func TestServerHandler_getJSONMetricValue(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -410,7 +414,7 @@ func TestServerHandler_getJSONMetricValue(t *testing.T) {
 			},
 			setupMock: func(m *mocks.MockMetrics) {
 				m.EXPECT().Get(entities.MetricName("test_error"), entities.CounterMetricName).
-					Return(entities.Metrics{}, fmt.Errorf("service error"))
+					Return(entities.Metrics{}, errors.New("service error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 		},
@@ -418,7 +422,7 @@ func TestServerHandler_getJSONMetricValue(t *testing.T) {
 			name:         "Body Read Error",
 			setupMock:    func(m *mocks.MockMetrics) {},
 			expectedCode: http.StatusBadRequest,
-			testBody:     &ErrorReader{Err: fmt.Errorf("forced read error")},
+			testBody:     &ErrorReader{Err: errors.New("forced read error")},
 		},
 		{
 			name:         "Invalid JSON Body",
@@ -464,6 +468,7 @@ func TestServerHandler_getJSONMetricValue(t *testing.T) {
 	}
 }
 
+//nolint:dupl // Intentionally similar test cases
 func TestServerHandler_handleJSONUploads(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -510,7 +515,7 @@ func TestServerHandler_handleJSONUploads(t *testing.T) {
 				Value: float64Ptr(123.45),
 			},
 			setupMock: func(m *mocks.MockMetrics) {
-				m.EXPECT().Create(gomock.Any()).Return(fmt.Errorf("service error"))
+				m.EXPECT().Create(gomock.Any()).Return(errors.New("service error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 		},
@@ -524,7 +529,7 @@ func TestServerHandler_handleJSONUploads(t *testing.T) {
 			setupMock: func(m *mocks.MockMetrics) {
 				m.EXPECT().Create(gomock.Any()).Return(nil)
 				m.EXPECT().Get(entities.MetricName("test_error"), entities.CounterMetricName).
-					Return(entities.Metrics{}, fmt.Errorf("get error"))
+					Return(entities.Metrics{}, errors.New("get error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 		},
@@ -542,7 +547,7 @@ func TestServerHandler_handleJSONUploads(t *testing.T) {
 			name:         "Body Read Error",
 			setupMock:    func(m *mocks.MockMetrics) {},
 			expectedCode: http.StatusBadRequest,
-			testBody:     &ErrorReader{Err: fmt.Errorf("forced read error")},
+			testBody:     &ErrorReader{Err: errors.New("forced read error")},
 		},
 	}
 
@@ -581,7 +586,7 @@ func TestServerHandler_handleJSONUploads(t *testing.T) {
 	}
 }
 
-// ErrorReader is a custom io.Reader that always returns an error
+// ErrorReader is a custom io.Reader that always returns an error.
 type ErrorReader struct {
 	Err error
 }
