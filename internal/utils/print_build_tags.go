@@ -9,7 +9,7 @@ package utils
 
 import "fmt"
 
-// PrintBuildTags outputs the build information to standard output.
+// BuildTagsFormatedString outputs the build information to standard output.
 //
 // It formats the output to show the build version, build date, and build commit
 // hash, replacing any empty values with "N/A" for clarity.
@@ -21,12 +21,13 @@ import "fmt"
 //
 // Example usage:
 //
-//	utils.PrintBuildTags("1.0.0", "2024-11-05", "abcdef1234567890abcdef1234567890abcdef12")
-func PrintBuildTags(buildVersion, buildDate, buildCommit string) {
+//	utils.BuildTagsFormatedString("1.0.0", "2024-11-05", "abcdef1234567890abcdef1234567890abcdef12")
+func BuildTagsFormatedString(buildVersion, buildDate, buildCommit string) string {
 	// Output the build information
-	fmt.Printf("Build version: %s\n", getBuildInfo(buildVersion))
-	fmt.Printf("Build date: %s\n", getBuildInfo(buildDate))
-	fmt.Printf("Build commit: %s\n", getBuildInfo(buildCommit))
+	return fmt.Sprintf("Build version: %s\nBuild date: %s\nBuild commit: %s\n",
+		getBuildInfo(buildVersion),
+		getBuildInfo(buildDate),
+		getBuildInfo(buildCommit))
 }
 
 // getBuildInfo returns the provided information string or "N/A" if it is empty.

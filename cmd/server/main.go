@@ -54,7 +54,7 @@ type ServerApp struct {
 
 func main() {
 	// Output the build information
-	utils.PrintBuildTags(buildVersion, buildDate, buildCommit)
+	fmt.Println(utils.BuildTagsFormatedString(buildVersion, buildDate, buildCommit))
 
 	// appConfig - holds a pointer to the server configurations
 	appConfig, err := config.NewServerConfig()
@@ -120,13 +120,13 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	router := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
+	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
 
 	app.logger.DebugContext(context.Background(), "running server 🔥",
 		slog.String("address", app.cfg.Envs.Address))
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
-		Handler: router,
+		Handler: handlers.Router(app.logger, serverHandlers),
 	}
 
 	if err = srv.ListenAndServe(); err != nil {
