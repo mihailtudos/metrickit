@@ -12,6 +12,8 @@ import (
 
 // Metrics defines the interface for metrics operations.
 // It includes methods for creating, retrieving, and storing metrics.
+//
+//go:generate mockgen -destination=mocks/mock_metrics.go -package=mocks github.com/mihailtudos/metrickit/internal/service/server Metrics
 type Metrics interface {
 	// Create adds a new metric to the storage.
 	Create(metric entities.Metrics) error
@@ -32,13 +34,11 @@ type Metrics interface {
 // Service provides methods for managing metrics.
 // It implements the Metrics interface and uses a repository to perform operations.
 type Service struct {
-	MetricsService Metrics // The metrics service used for operations.
+	MetricsService Metrics
 }
 
 // NewMetricsService creates a new instance of the Service struct.
 // It initializes the metrics service with the provided repository and logger.
-func NewMetricsService(repository *repositories.Repository, logger *slog.Logger) *Service {
-	return &Service{
-		MetricsService: NewMetricService(repository.MetricsRepository, logger), // Initialize the metrics service.
-	}
+func NewMetricsService(repository *repositories.Repository, logger *slog.Logger) *MetricsService {
+	return NewMetricService(repository.MetricsRepository, logger) // Initialize the metrics service.
 }

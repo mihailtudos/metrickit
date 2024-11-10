@@ -15,11 +15,18 @@ import (
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/logger"
 	"github.com/mihailtudos/metrickit/internal/service/server"
+	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
 	_ "net/http/pprof"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 //nolint:godot // this comment is part of the Swagger documentation
@@ -46,6 +53,9 @@ type ServerApp struct {
 }
 
 func main() {
+	// Output the build information
+	fmt.Println(utils.BuildTagsFormatedString(buildVersion, buildDate, buildCommit))
+
 	// appConfig - holds a pointer to the server configurations
 	appConfig, err := config.NewServerConfig()
 	if err != nil {
@@ -64,10 +74,10 @@ func main() {
 	// initializing a DB conn pool if the DSN was provided
 	ctx := context.Background()
 	if app.cfg.Envs.D3SN != "" {
-		db, err := database.InitPostgresDB(ctx, app.cfg.Envs.D3SN, app.logger)
-		if err != nil {
-			app.logger.ErrorContext(ctx, "failed to init db", helpers.ErrAttr(err))
-			os.Exit(1)
+		db, e := database.InitPostgresDB(ctx, app.cfg.Envs.D3SN, app.logger)
+		if e != nil {
+			app.logger.ErrorContext(ctx, "failed to init db", helpers.ErrAttr(e))
+			log.Fatal("failed to init db: " + e.Error())
 		}
 
 		app.db = db
@@ -110,13 +120,13 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	router := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
+	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
 
 	app.logger.DebugContext(context.Background(), "running server 🔥",
 		slog.String("address", app.cfg.Envs.Address))
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
-		Handler: router,
+		Handler: handlers.Router(app.logger, serverHandlers),
 	}
 
 	if err = srv.ListenAndServe(); err != nil {

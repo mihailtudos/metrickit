@@ -17,7 +17,4 @@ func ErrAttr(err error) slog.Attr {
 	}
 
 	return slog.Any("error", err)
-
-	// Output:
-	// {"level":"INFO","msg":"operation failed","error":"some error"}
 }
