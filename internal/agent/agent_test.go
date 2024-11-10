@@ -1,13 +1,13 @@
 package agent
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
@@ -18,15 +18,17 @@ import (
 
 func TestAgent(t *testing.T) {
 	t.Setenv("RATE_LIMIT", "2")
-	agentCfg, err := config.NewAgentConfig()
-	require.NoError(t, err)
 
 	logger := slog.Default()
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, logger)
-	agentService := as.NewAgentService(metricsRepo, agentCfg.Log, &agentCfg.Key)
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		t.Fatal(err)
+	}
+	agentService := as.NewAgentService(metricsRepo, logger, nil, nil)
 
-	err = agentService.MetricsService.Collect()
+	err := agentService.MetricsService.Collect()
 	require.NoError(t, err)
 
 	metrics, err := metricsRepo.GetAll()

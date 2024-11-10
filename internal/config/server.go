@@ -4,33 +4,41 @@
 package config
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/mihailtudos/metrickit/internal/utils"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
 // Default configuration values.
 const (
 	defaultPort            = 8080
 	defaultAddress         = "localhost"
-	defaultStorePath       = "/tmp/metrics-db.json"
-	defaultLogLevel        = "debug"
-	defaultStoreInterval   = 300 // in seconds
-	defaultShutdownTimeout = 30  // in seconds
+	DefaultStorePath       = "/tmp/metrics-db.json"
+	DefaultLogLevel        = "debug"
+	DefaultStoreInterval   = 300                  // in seconds
+	defaultShutdownTimeout = 30                   // in seconds
+	defaultPrivatKeyPath   = "./keys/private.pem" // Default path to the public key file.
 )
 
 // serverEnvs defines the server's environment variable configuration.
 // It includes parameters for server address, logging, storage, database connection,
 // and other settings. The struct tags specify the expected environment variables.
 type serverEnvs struct {
-	Address       string `env:"ADDRESS"`           // Server address in the form host:port.
-	LogLevel      string `env:"LOG_LEVEL"`         // Level of logging (e.g., "debug", "info").
-	StorePath     string `env:"FILE_STORAGE_PATH"` // Path to the metrics storage file.
-	D3SN          string `env:"DATABASE_DSN"`      // Data Source Name for the database connection.
-	Key           string `env:"KEY"`               // Secret key for data signing.
-	StoreInterval int    `env:"STORE_INTERVAL"`    // Interval for storing metrics, in seconds.
-	ReStore       bool   `env:"RESTORE"`           // Indicates if metrics should be restored on startup.
+	Address        string `env:"ADDRESS"`           // Server address in the form host:port.
+	LogLevel       string `env:"LOG_LEVEL"`         // Level of logging (e.g., "debug", "info").
+	StorePath      string `env:"FILE_STORAGE_PATH"` // Path to the metrics storage file.
+	D3SN           string `env:"DATABASE_DSN"`      // Data Source Name for the database connection.
+	Key            string `env:"KEY"`               // Secret key for data signing.
+	PrivateKeyPath string `env:"CRYPTO_KEY"`        // Path to the private key file.
+	StoreInterval  int    `env:"STORE_INTERVAL"`    // Interval for storing metrics, in seconds.
+	ReStore        bool   `env:"RESTORE"`           // Indicates if metrics should be restored on startup.
 }
 
 // parseServerEnvs parses server configuration from command-line flags and environment variables.
@@ -38,11 +46,12 @@ type serverEnvs struct {
 // Returns a populated serverEnvs struct or an error if parsing fails.
 func parseServerEnvs() (*serverEnvs, error) {
 	envConfig := &serverEnvs{
-		Address:       fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
-		LogLevel:      defaultLogLevel,
-		StoreInterval: defaultStoreInterval,
-		StorePath:     defaultStorePath,
-		ReStore:       true,
+		Address:        fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
+		LogLevel:       DefaultLogLevel,
+		StoreInterval:  DefaultStoreInterval,
+		StorePath:      DefaultStorePath,
+		ReStore:        true,
+		PrivateKeyPath: defaultPrivatKeyPath,
 	}
 
 	flag.StringVar(&envConfig.Address, "a", envConfig.Address, "Address and port to run the server.")
@@ -52,6 +61,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.BoolVar(&envConfig.ReStore, "r", envConfig.ReStore, "Enable or disable metrics restoration at startup.")
 	flag.StringVar(&envConfig.D3SN, "d", "", "Database connection string (DSN).")
 	flag.StringVar(&envConfig.Key, "k", "", "Secret key for signing data.")
+	flag.StringVar(&envConfig.PrivateKeyPath, "crypto-key", envConfig.PrivateKeyPath, "Path to the private key file.")
 
 	flag.Parse()
 
@@ -65,8 +75,9 @@ func parseServerEnvs() (*serverEnvs, error) {
 // ServerConfig represents the full server configuration, including
 // parsed environment variables and additional settings like the shutdown timeout.
 type ServerConfig struct {
-	Envs            *serverEnvs // Server environment configuration.
-	ShutdownTimeout int         // Timeout for server shutdown, in seconds.
+	Envs            *serverEnvs     // Server environment configuration.
+	PrivateKey      *rsa.PrivateKey // Private key for encryption, configurable via environment variable "CRYPTO_KEY".
+	ShutdownTimeout int             // Timeout for server shutdown, in seconds.
 }
 
 // NewServerConfig creates a new ServerConfig instance by parsing environment
@@ -78,10 +89,45 @@ func NewServerConfig() (*ServerConfig, error) {
 		return nil, fmt.Errorf("failed to create the server configuration: %w", err)
 	}
 
+	var privateKey *rsa.PrivateKey
+	// Setup public key from the provided path.
+	if privateKey, err = setPrivateKey(envs.PrivateKeyPath); err != nil {
+		return nil, fmt.Errorf("failed to setup private key: %w", err)
+	}
+
 	cfg := &ServerConfig{
 		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
+		PrivateKey:      privateKey,
 	}
 
 	return cfg, nil
+}
+
+// setPrivateKey sets up the private key for encryption.
+//
+//nolint:dupl // Will be refactored in the future
+func setPrivateKey(privateKeyPath string) (*rsa.PrivateKey, error) {
+	if privateKeyPath == "" {
+		return nil, ErrPrivateKeyPathNotSet
+	}
+
+	if !utils.VerifyFileExists(privateKeyPath) {
+		if err := helpers.GenerateKeyPair(privateKeyPath); err != nil {
+			return nil, fmt.Errorf("failed to generate key pair: %w", err)
+		}
+	}
+
+	privateKeyBytes, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read private key: %w", err)
+	}
+
+	block, _ := pem.Decode(privateKeyBytes)
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	return privateKey, nil
 }

@@ -7,6 +7,9 @@
 package config
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -15,21 +18,27 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/mihailtudos/metrickit/internal/logger"
+	"github.com/mihailtudos/metrickit/internal/utils"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
-// Default values for various configuration settings.
-const defaultReportInterval = 10 // Default interval for reporting metrics, in seconds.
-const defaultPoolInterval = 2    // Default interval for polling metrics, in seconds.
-const defaultRateLimit = 10      // Default rate limit for concurrent operations.
+const (
+	// Default values for various configuration settings.
+	defaultReportInterval = 10                  // Default interval for reporting metrics, in seconds.
+	defaultPoolInterval   = 2                   // Default interval for polling metrics, in seconds.
+	defaultRateLimit      = 10                  // Default rate limit for concurrent operations.
+	defaultPublicKeyPath  = "./keys/public.pem" // Default path to the public key file.
+)
 
 // AgentEnvs represents the agent's runtime configuration settings.
 type AgentEnvs struct {
-	Log            *slog.Logger  // Logger used by the agent.
-	ServerAddr     string        // Address of the server to which metrics are sent.
-	Key            string        // Secret key used for signing data.
-	RateLimit      int           // Maximum number of concurrent goroutines.
-	PollInterval   time.Duration // Interval between metric polling operations.
-	ReportInterval time.Duration // Interval between sending metrics to the server.
+	PublicKey      *rsa.PublicKey // Public key for encryption, configurable via environment variable "CRYPTO_KEY".
+	Log            *slog.Logger   // Logger used by the agent.
+	ServerAddr     string         // Address of the server to which metrics are sent.
+	Key            string         // Secret key used for signing data.
+	RateLimit      int            // Maximum number of concurrent goroutines.
+	PollInterval   time.Duration  // Interval between metric polling operations.
+	ReportInterval time.Duration  // Interval between sending metrics to the server.
 }
 
 // envAgentConfig is a struct for parsing environment variables into agent configuration settings.
@@ -38,7 +47,8 @@ type envAgentConfig struct {
 	// Server address, configurable via environment variable "ADDRESS".
 	LogLevel string `env:"LOG_LEVEL"`
 	// Logging level, configurable via environment variable "LOG_LEVEL".
-	Key string `env:"KEY"`
+	Key           string `env:"KEY"`
+	PublicKeyPath string `env:"CRYPTO_KEY"` // Public key file path, configurable via env "CRYPTO_KEY".
 	// Secret key, configurable via environment variable "KEY".
 	PollInterval int `env:"POLL_INTERVAL"`
 	// Polling interval in seconds, configurable via environment variable "POLL_INTERVAL".
@@ -67,6 +77,12 @@ func NewAgentConfig() (*AgentEnvs, error) {
 		return nil, fmt.Errorf("agent logger: %w", err)
 	}
 
+	var publicKey *rsa.PublicKey
+	// Setup public key from the provided path.
+	if publicKey, err = setupPublicKey(envs.PublicKeyPath); err != nil {
+		return nil, fmt.Errorf("failed to setup public key: %w", err)
+	}
+
 	return &AgentEnvs{
 		Log:            l,
 		ServerAddr:     envs.ServerAddr,
@@ -74,6 +90,7 @@ func NewAgentConfig() (*AgentEnvs, error) {
 		ReportInterval: time.Duration(envs.ReportInterval) * time.Second,
 		Key:            envs.Key,
 		RateLimit:      envs.RateLimit,
+		PublicKey:      publicKey,
 	}, nil
 }
 
@@ -86,11 +103,12 @@ func NewAgentConfig() (*AgentEnvs, error) {
 //   - error: An error if environment parsing fails.
 func parseAgentEnvs() (*envAgentConfig, error) {
 	envConfig := &envAgentConfig{
-		LogLevel:       defaultLogLevel,                                   // Default log level.
+		LogLevel:       DefaultLogLevel,                                   // Default log level.
 		PollInterval:   defaultPoolInterval,                               // Default polling interval.
 		ReportInterval: defaultReportInterval,                             // Default reporting interval.
 		RateLimit:      defaultRateLimit,                                  // Default rate limit.
 		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort), // Default server address.
+		PublicKeyPath:  defaultPublicKeyPath,                              // Default public key path.
 	}
 
 	// Command-line flags override default values and environment variables.
@@ -111,6 +129,9 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	flag.IntVar(&envConfig.RateLimit, "l",
 		envConfig.RateLimit,
 		"rate limit, max goroutines to run at a time")
+	flag.StringVar(&envConfig.PublicKeyPath, "crypto-key",
+		envConfig.PublicKeyPath,
+		"path to the public key file")
 
 	flag.Parse()
 
@@ -120,4 +141,33 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	}
 
 	return envConfig, nil
+}
+
+// setupPublicKey sets up the public key for encryption and decryption.
+//
+//nolint:dupl // This is a duplicate but servers a different purpose.
+func setupPublicKey(publicKeyPath string) (*rsa.PublicKey, error) {
+	if publicKeyPath == "" {
+		return nil, ErrPublicKeyPathNotProvided
+	}
+
+	if !utils.VerifyFileExists(publicKeyPath) {
+		if err := helpers.GenerateKeyPair(publicKeyPath); err != nil {
+			return nil, fmt.Errorf("failed to generate key pair: %w", err)
+		}
+	}
+
+	// Read and parse public key
+	publicKeyBytes, err := os.ReadFile(publicKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public key file: %w", err)
+	}
+
+	p, _ := pem.Decode(publicKeyBytes)
+	publicKey, err := x509.ParsePKCS1PublicKey(p.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public key: %w", err)
+	}
+
+	return publicKey, nil
 }

@@ -2,7 +2,11 @@ package handlers
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -39,6 +43,7 @@ var templatesFs embed.FS
 // ServerHandler is a struct that encapsulates the services, logger,
 // database connection, and template filesystem for handling HTTP requests.
 type ServerHandler struct {
+	privateKey  *rsa.PrivateKey
 	services    server.Metrics
 	logger      *slog.Logger
 	TemplatesFs embed.FS
@@ -49,13 +54,14 @@ type ServerHandler struct {
 // NewHandler initializes a new ServerHandler and registers the application routes.
 // It takes services, logger, database connection, and a secret key as parameters.
 func NewHandler(services server.Metrics, logger *slog.Logger,
-	conn *pgxpool.Pool, secret string) *ServerHandler {
+	conn *pgxpool.Pool, secret string, privateKey *rsa.PrivateKey) *ServerHandler {
 	return &ServerHandler{
 		services:    services,
 		logger:      logger,
 		TemplatesFs: templatesFs,
 		db:          conn,
 		secret:      secret,
+		privateKey:  privateKey,
 	}
 }
 
@@ -482,6 +488,54 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 		}
 		sh.logger.DebugContext(r.Context(),
 			"request body passed integrity check")
+	}
+
+	isEncrypted := r.Header.Get("X-Encryption") == "RSA-AES"
+
+	if isEncrypted {
+		if sh.privateKey == nil {
+			http.Error(w, "Server not configured for encryption", http.StatusInternalServerError)
+			return
+		}
+
+		// Decrypt data
+		keySize := sh.privateKey.Size()
+		encryptedKey := body[:keySize]
+		encryptedData := body[keySize:]
+		aesKey, err := rsa.DecryptPKCS1v15(rand.Reader, sh.privateKey, encryptedKey)
+		if err != nil {
+			sh.logger.DebugContext(r.Context(), "failed to decrypt AES key", helpers.ErrAttr(err))
+			http.Error(w, "Failed to decrypt AES key", http.StatusBadRequest)
+			return
+		}
+
+		block, err := aes.NewCipher(aesKey)
+		if err != nil {
+			http.Error(w, "Failed to create AES cipher", http.StatusInternalServerError)
+			return
+		}
+
+		gcm, err := cipher.NewGCM(block)
+		if err != nil {
+			http.Error(w, "Failed to create GCM", http.StatusInternalServerError)
+			return
+		}
+
+		// Extract nonce and ciphertext
+		nonceSize := gcm.NonceSize()
+		if len(encryptedData) < nonceSize {
+			http.Error(w, "Malformed encrypted data", http.StatusBadRequest)
+			return
+		}
+		nonce := encryptedData[:nonceSize]
+		ciphertext := encryptedData[nonceSize:]
+
+		// Decrypt the data
+		body, err = gcm.Open(nil, nonce, ciphertext, nil)
+		if err != nil {
+			http.Error(w, "Failed to decrypt data", http.StatusBadRequest)
+			return
+		}
 	}
 
 	err = json.Unmarshal(body, &metrics)
