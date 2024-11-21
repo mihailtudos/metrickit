@@ -31,5 +31,4 @@ vendor/
 # Other
 /golangci-lint
 
-//ignore the keys inside the keys folder
 keys/*
