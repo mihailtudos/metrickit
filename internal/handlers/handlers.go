@@ -502,21 +502,21 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 		keySize := sh.privateKey.Size()
 		encryptedKey := body[:keySize]
 		encryptedData := body[keySize:]
-		aesKey, err := rsa.DecryptPKCS1v15(rand.Reader, sh.privateKey, encryptedKey)
-		if err != nil {
-			sh.logger.DebugContext(r.Context(), "failed to decrypt AES key", helpers.ErrAttr(err))
+		aesKey, errDec := rsa.DecryptPKCS1v15(rand.Reader, sh.privateKey, encryptedKey)
+		if errDec != nil {
+			sh.logger.DebugContext(r.Context(), "failed to decrypt AES key", helpers.ErrAttr(errDec))
 			http.Error(w, "Failed to decrypt AES key", http.StatusBadRequest)
 			return
 		}
 
-		block, err := aes.NewCipher(aesKey)
-		if err != nil {
+		block, errCiph := aes.NewCipher(aesKey)
+		if errCiph != nil {
 			http.Error(w, "Failed to create AES cipher", http.StatusInternalServerError)
 			return
 		}
 
-		gcm, err := cipher.NewGCM(block)
-		if err != nil {
+		gcm, errGcm := cipher.NewGCM(block)
+		if errGcm != nil {
 			http.Error(w, "Failed to create GCM", http.StatusInternalServerError)
 			return
 		}

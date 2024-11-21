@@ -28,7 +28,7 @@ func GenerateKeyPair(p string) error {
 		return fmt.Errorf("failed to create private key file: %w", err)
 	}
 
-	if err := pem.Encode(privateFile, &pem.Block{
+	if err = pem.Encode(privateFile, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}); err != nil {

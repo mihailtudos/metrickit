@@ -168,31 +168,31 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 	var encryptedData []byte
 	if publicKey != nil {
 		aesKey := make([]byte, aesKeySize)
-		if _, err := rand.Read(aesKey); err != nil {
+		if _, err = rand.Read(aesKey); err != nil {
 			return fmt.Errorf("failed to generate AES key: %w", err)
 		}
 
 		// Encrypt the AES key with RSA
-		encryptedKey, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, aesKey)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt AES key: %w", err)
+		encryptedKey, errEncr := rsa.EncryptPKCS1v15(rand.Reader, publicKey, aesKey)
+		if errEncr != nil {
+			return fmt.Errorf("failed to encrypt AES key: %w", errEncr)
 		}
 
 		// Create AES cipher
-		block, err := aes.NewCipher(aesKey)
-		if err != nil {
-			return fmt.Errorf("failed to create AES cipher: %w", err)
+		block, errChiph := aes.NewCipher(aesKey)
+		if errChiph != nil {
+			return fmt.Errorf("failed to create AES cipher: %w", errChiph)
 		}
 
 		// Create GCM mode
-		gcm, err := cipher.NewGCM(block)
-		if err != nil {
-			return fmt.Errorf("failed to create GCM: %w", err)
+		gcm, errGcm := cipher.NewGCM(block)
+		if errGcm != nil {
+			return fmt.Errorf("failed to create GCM: %w", errGcm)
 		}
 
 		// Create nonce
 		nonce := make([]byte, gcm.NonceSize())
-		if _, err := rand.Read(nonce); err != nil {
+		if _, err = rand.Read(nonce); err != nil {
 			return fmt.Errorf("failed to create nonce: %w", err)
 		}
 
