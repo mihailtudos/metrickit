@@ -3,14 +3,18 @@ package agent
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
+	mrand "math/rand"
 	"net/http"
 	"runtime"
 
@@ -23,18 +27,27 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
+const aesKeySize = 32
+
 // MetricsCollectionService is a service for collecting and storing metrics.
 type MetricsCollectionService struct {
-	mRepo  repositories.MetricsCollectionRepository
-	logger *slog.Logger
-	secret *string
+	mRepo     repositories.MetricsCollectionRepository
+	logger    *slog.Logger
+	secret    *string
+	publicKey *rsa.PublicKey
 }
 
 // NewMetricsCollectionService creates a new MetricsCollectionService.
-func NewMetricsCollectionService(repo repositories.MetricsCollectionRepository,
+func NewMetricsCollectionService(
+	repo repositories.MetricsCollectionRepository,
 	logger *slog.Logger,
-	secret *string) *MetricsCollectionService {
-	return &MetricsCollectionService{mRepo: repo, logger: logger, secret: secret}
+	secret *string, publicKey *rsa.PublicKey) *MetricsCollectionService {
+	return &MetricsCollectionService{
+		mRepo:     repo,
+		logger:    logger,
+		secret:    secret,
+		publicKey: publicKey,
+	}
 }
 
 // Collect collects metrics and stores them.
@@ -55,7 +68,7 @@ func (m *MetricsCollectionService) Collect() error {
 	}
 
 	gaugeMetrics := map[entities.MetricName]entities.Gauge{ //nolint:exhaustive // entities.PollCount is of type Counter
-		entities.RandomValue:     entities.Gauge(rand.Float64()),
+		entities.RandomValue:     entities.Gauge(mrand.Float64()),
 		entities.Alloc:           entities.Gauge(stats.Alloc),
 		entities.BuckHashSys:     entities.Gauge(stats.BuckHashSys),
 		entities.Frees:           entities.Gauge(stats.Frees),
@@ -129,7 +142,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 		allMetrics = append(allMetrics, metric)
 	}
 
-	err = m.publishMetric(ctx, url, "application/json", allMetrics)
+	err = m.publishMetric(ctx, url, "application/json", allMetrics, m.publicKey)
 	if err != nil {
 		m.logger.ErrorContext(ctx,
 			"publishing the counter metrics failed: ",
@@ -145,15 +158,58 @@ var ErrJSONMarshal = errors.New("failed to marshal to JSON")
 
 // publishMetric publishes the metrics to the server.
 func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
-	contentType string, metrics []entities.Metrics) error {
+	contentType string, metrics []entities.Metrics, publicKey *rsa.PublicKey) error {
 	mJSONStruct, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("failed serialize the metrics: %w", ErrJSONMarshal)
 	}
 
+	// Encrypt the metrics using the public key
+	var encryptedData []byte
+	if publicKey != nil {
+		aesKey := make([]byte, aesKeySize)
+		if _, err = rand.Read(aesKey); err != nil {
+			return fmt.Errorf("failed to generate AES key: %w", err)
+		}
+
+		// Encrypt the AES key with RSA
+		encryptedKey, errEncr := rsa.EncryptPKCS1v15(rand.Reader, publicKey, aesKey)
+		if errEncr != nil {
+			return fmt.Errorf("failed to encrypt AES key: %w", errEncr)
+		}
+
+		// Create AES cipher
+		block, errChiph := aes.NewCipher(aesKey)
+		if errChiph != nil {
+			return fmt.Errorf("failed to create AES cipher: %w", errChiph)
+		}
+
+		// Create GCM mode
+		gcm, errGcm := cipher.NewGCM(block)
+		if errGcm != nil {
+			return fmt.Errorf("failed to create GCM: %w", errGcm)
+		}
+
+		// Create nonce
+		nonce := make([]byte, gcm.NonceSize())
+		if _, err = rand.Read(nonce); err != nil {
+			return fmt.Errorf("failed to create nonce: %w", err)
+		}
+
+		// Encrypt data with AES-GCM
+		aesEncrypted := gcm.Seal(nonce, nonce, mJSONStruct, nil)
+
+		// Combine encrypted key and data
+		// First 256 bytes will be RSA-encrypted AES key, rest is AES-encrypted data
+		//nolint:gocritic // it avoids creating a new variable
+		encryptedData = append(encryptedKey, aesEncrypted...)
+	} else {
+		encryptedData = mJSONStruct
+	}
+
 	c := compressor.NewCompressor(m.logger)
 
-	gzipBuffer, err := c.Compress(mJSONStruct)
+	gzipBuffer, err := c.Compress(encryptedData)
 	if err != nil {
 		return fmt.Errorf("failed to compress metrics: %w", err)
 	}
@@ -164,6 +220,11 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Content-Encoding", "gzip")
+
+	// Add header to indicate encryption
+	if publicKey != nil {
+		req.Header.Set("X-Encryption", "RSA-AES") // or just "encrypted"
+	}
 
 	if m.secret != nil {
 		hash := hmac.New(sha256.New, []byte(*m.secret))

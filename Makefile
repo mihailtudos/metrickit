@@ -62,6 +62,13 @@ server/build:
 	cd cmd/server && \
       go build -buildvcs=false  -o server
 
+staticlint/build:
+	cd cmd/staticlint && go build -o staticlint && mv staticlint ../../staticlint
+	cd ../..
+
+staticlint/run: staticlint/build
+	./staticlint ./...
+
 autotest/run1: server/build
 	metricstest -test.v -test.run="^TestIteration1$$" \
 		-binary-path=cmd/server/server

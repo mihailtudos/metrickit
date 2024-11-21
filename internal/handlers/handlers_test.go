@@ -43,7 +43,7 @@ func setupTestRouter(t *testing.T, service server.Metrics) http.Handler {
 	// Using real in-memory repository instead of mocks
 	logger := slog.Default()
 
-	serverHandlers := NewHandler(service, logger, nil, "test-secret")
+	serverHandlers := NewHandler(service, logger, nil, "test-secret", nil)
 
 	return Router(logger, serverHandlers)
 }
@@ -104,7 +104,7 @@ func TestServerHandler_showMetrics(t *testing.T) {
 			tt.setupMock(mockService)
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			handler := NewHandler(mockService, logger, nil, "")
+			handler := NewHandler(mockService, logger, nil, "", nil)
 
 			// Create request
 			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
@@ -213,7 +213,7 @@ func TestServerHandler_getMetricValue(t *testing.T) {
 			tt.setupMock(mockService)
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			handler := NewHandler(mockService, logger, nil, "")
+			handler := NewHandler(mockService, logger, nil, "", nil)
 
 			req := httptest.NewRequest(http.MethodGet,
 				fmt.Sprintf("/value/%s/%s", tt.metricType, tt.metricName),
@@ -441,7 +441,7 @@ func TestServerHandler_getJSONMetricValue(t *testing.T) {
 			tt.setupMock(mockService)
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			handler := NewHandler(mockService, logger, nil, "")
+			handler := NewHandler(mockService, logger, nil, "", nil)
 
 			var req *http.Request
 			if tt.testBody != nil {
@@ -560,7 +560,7 @@ func TestServerHandler_handleJSONUploads(t *testing.T) {
 			tt.setupMock(mockService)
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			handler := NewHandler(mockService, logger, nil, "")
+			handler := NewHandler(mockService, logger, nil, "", nil)
 
 			var req *http.Request
 			if tt.testBody != nil {

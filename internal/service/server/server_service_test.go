@@ -13,18 +13,13 @@ import (
 )
 
 func TestCounterService(t *testing.T) {
-	cfg, err := config.NewServerConfig()
-	if err != nil {
-		log.Fatal("failed to get configs: ", err.Error())
-	}
-
-	l, err := logger.NewLogger(os.Stdout, cfg.Envs.LogLevel)
+	l, err := logger.NewLogger(os.Stdout, config.DefaultLogLevel)
 	if err != nil {
 		log.Fatal("failed to crate new log: ", err.Error())
 	}
 
 	ctx := context.Background()
-	store, err := storage.NewStorage(nil, l, cfg.Envs.StoreInterval, cfg.Envs.StorePath)
+	store, err := storage.NewStorage(nil, l, config.DefaultStoreInterval, config.DefaultStorePath)
 	if err != nil {
 		log.Fatal("failed to initiate storage: " + err.Error())
 	}
