@@ -24,7 +24,6 @@ const (
 	DefaultLogLevel        = "debug"
 	DefaultStoreInterval   = 300                  // in seconds
 	defaultShutdownTimeout = 30                   // in seconds
-	defaultPrivatKeyPath   = "./keys/private.pem" // Default path to the public key file.
 )
 
 // serverEnvs defines the server's environment variable configuration.
@@ -51,7 +50,6 @@ func parseServerEnvs() (*serverEnvs, error) {
 		StoreInterval:  DefaultStoreInterval,
 		StorePath:      DefaultStorePath,
 		ReStore:        true,
-		PrivateKeyPath: defaultPrivatKeyPath,
 	}
 
 	flag.StringVar(&envConfig.Address, "a", envConfig.Address, "Address and port to run the server.")

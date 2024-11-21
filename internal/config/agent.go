@@ -24,10 +24,9 @@ import (
 
 const (
 	// Default values for various configuration settings.
-	defaultReportInterval = 10                  // Default interval for reporting metrics, in seconds.
-	defaultPoolInterval   = 2                   // Default interval for polling metrics, in seconds.
-	defaultRateLimit      = 10                  // Default rate limit for concurrent operations.
-	defaultPublicKeyPath  = "./keys/public.pem" // Default path to the public key file.
+	defaultReportInterval = 10 // Default interval for reporting metrics, in seconds.
+	defaultPoolInterval   = 2  // Default interval for polling metrics, in seconds.
+	defaultRateLimit      = 10 // Default rate limit for concurrent operations.
 )
 
 // AgentEnvs represents the agent's runtime configuration settings.
@@ -108,7 +107,6 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 		ReportInterval: defaultReportInterval,                             // Default reporting interval.
 		RateLimit:      defaultRateLimit,                                  // Default rate limit.
 		ServerAddr:     fmt.Sprintf("%s:%d", defaultAddress, defaultPort), // Default server address.
-		PublicKeyPath:  defaultPublicKeyPath,                              // Default public key path.
 	}
 
 	// Command-line flags override default values and environment variables.
