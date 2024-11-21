@@ -30,3 +30,5 @@ vendor/
 
 # Other
 /golangci-lint
+
+keys/*
