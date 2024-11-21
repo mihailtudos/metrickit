@@ -22,8 +22,8 @@ const (
 	defaultAddress         = "localhost"
 	DefaultStorePath       = "/tmp/metrics-db.json"
 	DefaultLogLevel        = "debug"
-	DefaultStoreInterval   = 300                  // in seconds
-	defaultShutdownTimeout = 30                   // in seconds
+	DefaultStoreInterval   = 300 // in seconds
+	defaultShutdownTimeout = 30  // in seconds
 )
 
 // serverEnvs defines the server's environment variable configuration.
@@ -45,11 +45,11 @@ type serverEnvs struct {
 // Returns a populated serverEnvs struct or an error if parsing fails.
 func parseServerEnvs() (*serverEnvs, error) {
 	envConfig := &serverEnvs{
-		Address:        fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
-		LogLevel:       DefaultLogLevel,
-		StoreInterval:  DefaultStoreInterval,
-		StorePath:      DefaultStorePath,
-		ReStore:        true,
+		Address:       fmt.Sprintf("%s:%d", defaultAddress, defaultPort),
+		LogLevel:      DefaultLogLevel,
+		StoreInterval: DefaultStoreInterval,
+		StorePath:     DefaultStorePath,
+		ReStore:       true,
 	}
 
 	flag.StringVar(&envConfig.Address, "a", envConfig.Address, "Address and port to run the server.")
