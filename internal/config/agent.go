@@ -48,8 +48,8 @@ type envAgentConfig struct {
 	// Server address, configurable via environment variable "ADDRESS".
 	LogLevel string `env:"LOG_LEVEL"`
 	// Logging level, configurable via environment variable "LOG_LEVEL".
-	Key           string `env:"KEY" json:"crypto_key"`
-	PublicKeyPath string `env:"CRYPTO_KEY"` // Public key file path, configurable via env "CRYPTO_KEY".
+	Key           string `env:"KEY"`
+	PublicKeyPath string `env:"CRYPTO_KEY" json:"crypto_key"` // Public key file path, configurable via env "CRYPTO_KEY".
 	// Rate limit, configurable via environment variable "RATE_LIMIT".
 	ConfigFilePath string `env:"CONFIG"`
 	// Secret key, configurable via environment variable "KEY".
@@ -115,7 +115,7 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	// Command-line flags override default values and environment variables.
 	flag.StringVar(&envConfig.LogLevel, "ll",
 		envConfig.LogLevel, "log level")
-	flag.StringVar(&envConfig.ConfigFilePath, "c",
+	flag.StringVar(&envConfig.ConfigFilePath, "config",
 		"", "agent json configuration file path")
 	flag.StringVar(&envConfig.ServerAddr, "a",
 		envConfig.ServerAddr, "server address - usage: ADDRESS:PORT")
@@ -151,7 +151,7 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 
 		err := viper.ReadInConfig()
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("failed to read json config file: %w", err)
 		}
 
 		if envConfig.ServerAddr == "" {
@@ -159,7 +159,7 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 		}
 
 		utils.Replace(&envConfig.ServerAddr, viper.GetString("address"))
-		utils.Replace(&envConfig.Key, viper.GetString("crypto_key"))
+		utils.Replace(&envConfig.PublicKeyPath, viper.GetString("crypto_key"))
 		utils.Replace(&envConfig.PollInterval, int(viper.GetDuration("poll_interval").Seconds()))
 		utils.Replace(&envConfig.ReportInterval, int(viper.GetDuration("report_interval").Seconds()))
 	}
