@@ -12,12 +12,13 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"github.com/spf13/viper"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/spf13/viper"
+
 	"github.com/mihailtudos/metrickit/internal/logger"
 	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
@@ -49,14 +50,14 @@ type envAgentConfig struct {
 	// Logging level, configurable via environment variable "LOG_LEVEL".
 	Key           string `env:"KEY" json:"crypto_key"`
 	PublicKeyPath string `env:"CRYPTO_KEY"` // Public key file path, configurable via env "CRYPTO_KEY".
+	// Rate limit, configurable via environment variable "RATE_LIMIT".
+	ConfigFilePath string `env:"CONFIG"`
 	// Secret key, configurable via environment variable "KEY".
 	PollInterval int `env:"POLL_INTERVAL" json:"poll_interval"`
 	// Polling interval in seconds, configurable via environment variable "POLL_INTERVAL".
 	ReportInterval int `env:"REPORT_INTERVAL" json:"report_interval"`
 	// Reporting interval in seconds, configurable via environment variable "REPORT_INTERVAL".
 	RateLimit int `env:"RATE_LIMIT"`
-	// Rate limit, configurable via environment variable "RATE_LIMIT".
-	ConfigFilePath string `env:"CONFIG"`
 }
 
 // NewAgentConfig creates a new AgentEnvs instance by parsing environment variables
