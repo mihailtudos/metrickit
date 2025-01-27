@@ -58,7 +58,6 @@ func parseServerEnvs() (*serverEnvs, error) {
 
 	flag.StringVar(&envConfig.ConfigPath, "config", "", "Path to the json configuration file.")
 	flag.StringVar(&envConfig.Address, "a", envConfig.Address, "Address and port to run the server.")
-	flag.StringVar(&envConfig.Address, "a", envConfig.Address, "Address and port to run the server.")
 	flag.StringVar(&envConfig.LogLevel, "l", envConfig.LogLevel, "Log level (e.g., debug, info, warn).")
 	flag.IntVar(&envConfig.StoreInterval, "i", envConfig.StoreInterval, "Metrics store interval in seconds.")
 	flag.StringVar(&envConfig.StorePath, "f", envConfig.StorePath, "Path to the metrics store file.")

@@ -23,7 +23,7 @@ swag/gen:
 	swag init --generalInfo ./cmd/server/main.go --parseInternal   --output ./swagger/
 	
 run/server:
-	go run ./cmd/server/. -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
+	go run ./cmd/server/. -crypto-key="./private.pem" -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
 	go run ./cmd/agent/. $(ARGS)
