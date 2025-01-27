@@ -32,3 +32,8 @@ vendor/
 /golangci-lint
 
 keys/*
+
+/configs/*.json
+!/configs/*.example.json
+
+/cmd/playground

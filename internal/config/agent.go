@@ -9,9 +9,11 @@ package config
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -55,6 +57,8 @@ type envAgentConfig struct {
 	// Reporting interval in seconds, configurable via environment variable "REPORT_INTERVAL".
 	RateLimit int `env:"RATE_LIMIT"`
 	// Rate limit, configurable via environment variable "RATE_LIMIT".
+	ConfigPath string `env:"CONFIG"`
+	// Configuration file path, configurable via environment variable "CONFIG".
 }
 
 // NewAgentConfig creates a new AgentEnvs instance by parsing environment variables
@@ -77,8 +81,12 @@ func NewAgentConfig() (*AgentEnvs, error) {
 	}
 
 	var publicKey *rsa.PublicKey
+	fmt.Println("hit1")
+
 	// Setup public key from the provided path.
 	if publicKey, err = setupPublicKey(envs.PublicKeyPath); err != nil {
+		fmt.Println("hit2")
+
 		return nil, fmt.Errorf("failed to setup public key: %w", err)
 	}
 
@@ -130,6 +138,9 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	flag.StringVar(&envConfig.PublicKeyPath, "crypto-key",
 		envConfig.PublicKeyPath,
 		"path to the public key file")
+	flag.StringVar(&envConfig.ConfigPath, "config",
+		envConfig.ConfigPath,
+		"path to the config file")
 
 	flag.Parse()
 
@@ -138,6 +149,12 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 		return nil, fmt.Errorf("agent configs: %w", err)
 	}
 
+	// Read the configuration file if provided
+	if err := setConfigurationFromFile(envConfig); err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	fmt.Printf("envConfig: %+v\n", envConfig)
 	return envConfig, nil
 }
 
@@ -146,8 +163,10 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 //nolint:dupl // This is a duplicate but servers a different purpose.
 func setupPublicKey(publicKeyPath string) (*rsa.PublicKey, error) {
 	if publicKeyPath == "" {
+		fmt.Println("hit3.1")
 		return nil, ErrPublicKeyPathNotProvided
 	}
+	fmt.Println("hit3")
 
 	if !utils.VerifyFileExists(publicKeyPath) {
 		if err := helpers.GenerateKeyPair(publicKeyPath); err != nil {
@@ -168,4 +187,50 @@ func setupPublicKey(publicKeyPath string) (*rsa.PublicKey, error) {
 	}
 
 	return publicKey, nil
+}
+
+type Duration time.Duration
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	parsed, err := time.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	*d = Duration(parsed)
+	return nil
+}
+
+type envAgentFileConfig struct {
+	ServerAddr    string `json:"address"`
+	PublicKeyPath string `json:"crypto_key"`
+}
+
+func setConfigurationFromFile(envConfig *envAgentConfig) error {
+	if envConfig.ConfigPath == "" {
+		return nil
+	}
+
+	f, err := os.Open(envConfig.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var newConfig envAgentFileConfig
+	if err := json.Unmarshal(data, &newConfig); err != nil {
+		return fmt.Errorf("failed to unmarshal config file: %w", err)
+	}
+
+	fmt.Printf("newConfig: %+v\n", newConfig)
+
+	return nil
 }
