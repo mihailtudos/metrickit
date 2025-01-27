@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"github.com/spf13/viper"
 	"log/slog"
 	"os"
 	"time"
@@ -42,19 +43,20 @@ type AgentEnvs struct {
 
 // envAgentConfig is a struct for parsing environment variables into agent configuration settings.
 type envAgentConfig struct {
-	ServerAddr string `env:"ADDRESS"`
+	ServerAddr string `env:"ADDRESS" json:"address"`
 	// Server address, configurable via environment variable "ADDRESS".
 	LogLevel string `env:"LOG_LEVEL"`
 	// Logging level, configurable via environment variable "LOG_LEVEL".
-	Key           string `env:"KEY"`
+	Key           string `env:"KEY" json:"crypto_key"`
 	PublicKeyPath string `env:"CRYPTO_KEY"` // Public key file path, configurable via env "CRYPTO_KEY".
 	// Secret key, configurable via environment variable "KEY".
-	PollInterval int `env:"POLL_INTERVAL"`
+	PollInterval int `env:"POLL_INTERVAL" json:"poll_interval"`
 	// Polling interval in seconds, configurable via environment variable "POLL_INTERVAL".
-	ReportInterval int `env:"REPORT_INTERVAL"`
+	ReportInterval int `env:"REPORT_INTERVAL" json:"report_interval"`
 	// Reporting interval in seconds, configurable via environment variable "REPORT_INTERVAL".
 	RateLimit int `env:"RATE_LIMIT"`
 	// Rate limit, configurable via environment variable "RATE_LIMIT".
+	ConfigFilePath string `env:"CONFIG"`
 }
 
 // NewAgentConfig creates a new AgentEnvs instance by parsing environment variables
@@ -112,6 +114,8 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	// Command-line flags override default values and environment variables.
 	flag.StringVar(&envConfig.LogLevel, "ll",
 		envConfig.LogLevel, "log level")
+	flag.StringVar(&envConfig.ConfigFilePath, "c",
+		"", "agent json configuration file path")
 	flag.StringVar(&envConfig.ServerAddr, "a",
 		envConfig.ServerAddr, "server address - usage: ADDRESS:PORT")
 	flag.StringVar(&envConfig.Key, "k",
@@ -138,6 +142,28 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 		return nil, fmt.Errorf("agent configs: %w", err)
 	}
 
+	// Override default values with config variables.
+	if envConfig.ConfigFilePath != "" {
+		viper.SetConfigName("agent") // name of the file without extension
+		viper.SetConfigType("json")  // specify the file type
+		viper.AddConfigPath(envConfig.ConfigFilePath)
+
+		err := viper.ReadInConfig()
+		if err != nil {
+			panic(err)
+		}
+
+		if envConfig.ServerAddr == "" {
+			envConfig.ServerAddr = viper.GetString("address")
+		}
+
+		utils.Replace(&envConfig.ServerAddr, viper.GetString("address"))
+		utils.Replace(&envConfig.Key, viper.GetString("crypto_key"))
+		utils.Replace(&envConfig.PollInterval, int(viper.GetDuration("poll_interval").Seconds()))
+		utils.Replace(&envConfig.ReportInterval, int(viper.GetDuration("report_interval").Seconds()))
+	}
+
+	fmt.Printf("%+v", envConfig)
 	return envConfig, nil
 }
 
