@@ -14,6 +14,7 @@ const (
 	rsaKeySize = 2048
 )
 
+// GenerateKeyPair generates a new RSA key pair and saves it to the specified path.
 func GenerateKeyPair(p string) error {
 	privateKey, err := rsa.GenerateKey(rand.Reader, rsaKeySize)
 	if err != nil {
