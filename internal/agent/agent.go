@@ -61,7 +61,7 @@ func RunAgent(agentCfg *config.AgentEnvs) error {
 
 	// Set up a channel to listen for termination signals.
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		<-sigChan
 		cancel()
