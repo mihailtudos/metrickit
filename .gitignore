@@ -32,3 +32,5 @@ vendor/
 /golangci-lint
 
 keys/*
+
+*.pem
