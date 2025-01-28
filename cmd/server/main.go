@@ -32,6 +32,8 @@ var (
 	buildCommit  string
 )
 
+const timeToShutDown = 5
+
 //nolint:godot // this comment is part of the Swagger documentation
 // @BasePath  /
 // @Title Metrics API
@@ -95,10 +97,8 @@ func main() {
 	}
 }
 
+// run function starts the server and handles the server's lifecycle.
 func (app *ServerApp) run(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	app.logger.DebugContext(ctx, "provided_config",
 		slog.String("ServerAddress", app.cfg.Envs.Address),
 		slog.String("StorePath", app.cfg.Envs.StorePath),
@@ -147,7 +147,7 @@ func (app *ServerApp) run(ctx context.Context) error {
 	app.logger.InfoContext(ctx, "received signal, shutting down server", slog.String("signal", sig.String()))
 
 	// Shutdown the server gracefully
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, timeToShutDown*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
