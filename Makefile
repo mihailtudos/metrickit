@@ -26,7 +26,7 @@ run/server:
 	go run ./cmd/server/. -crypto-key="./private.pem" -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
-	go run ./cmd/agent/. $(ARGS)
+	go run ./cmd/agent/. $(ARGS) -crypto-key=public.pem
 
 run/tests:
 	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...

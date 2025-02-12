@@ -2,10 +2,7 @@ package handlers
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"embed"
@@ -73,6 +70,8 @@ func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 	mux.Use(
 		RequestLogger(logger),
 		WithCompressedResponse(logger),
+		WithBodyValidator(sh.secret, logger),
+		WithRequestDecryptor(sh.privateKey, logger),
 	)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
@@ -479,65 +478,6 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
-	if sh.secret != "" {
-		if !isBodyValid(body, r.Header.Get("HashSHA256"), sh.secret) {
-			sh.logger.DebugContext(r.Context(),
-				"request body failed integrity check")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		sh.logger.DebugContext(r.Context(),
-			"request body passed integrity check")
-	}
-
-	isEncrypted := r.Header.Get("X-Encryption") == "RSA-AES"
-
-	if isEncrypted {
-		if sh.privateKey == nil {
-			http.Error(w, "Server not configured for encryption", http.StatusInternalServerError)
-			return
-		}
-
-		// Decrypt data
-		keySize := sh.privateKey.Size()
-		encryptedKey := body[:keySize]
-		encryptedData := body[keySize:]
-		aesKey, errDec := rsa.DecryptPKCS1v15(rand.Reader, sh.privateKey, encryptedKey)
-		if errDec != nil {
-			sh.logger.DebugContext(r.Context(), "failed to decrypt AES key", helpers.ErrAttr(errDec))
-			http.Error(w, "Failed to decrypt AES key", http.StatusBadRequest)
-			return
-		}
-
-		block, errCiph := aes.NewCipher(aesKey)
-		if errCiph != nil {
-			http.Error(w, "Failed to create AES cipher", http.StatusInternalServerError)
-			return
-		}
-
-		gcm, errGcm := cipher.NewGCM(block)
-		if errGcm != nil {
-			http.Error(w, "Failed to create GCM", http.StatusInternalServerError)
-			return
-		}
-
-		// Extract nonce and ciphertext
-		nonceSize := gcm.NonceSize()
-		if len(encryptedData) < nonceSize {
-			http.Error(w, "Malformed encrypted data", http.StatusBadRequest)
-			return
-		}
-		nonce := encryptedData[:nonceSize]
-		ciphertext := encryptedData[nonceSize:]
-
-		// Decrypt the data
-		body, err = gcm.Open(nil, nonce, ciphertext, nil)
-		if err != nil {
-			http.Error(w, "Failed to decrypt data", http.StatusBadRequest)
-			return
-		}
-	}
-
 	err = json.Unmarshal(body, &metrics)
 	if err != nil {
 		sh.logger.DebugContext(r.Context(),
@@ -723,16 +663,6 @@ func (sh *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.M
 
 		return &currentDelta, nil
 	}
-}
-
-// isBodyValid verifies the integrity of the request body by comparing the provided hash with a computed hash.
-// It returns true if the request hash is not empty and matches the computed hash using the provided secret.
-func isBodyValid(data []byte, reqHash, secret string) bool {
-	if reqHash == "" {
-		return false
-	}
-	hashedStr := getHash(data, secret)
-	return hashedStr == reqHash
 }
 
 // getHash computes the HMAC SHA-256 hash of the provided data using the provided secret.
