@@ -40,10 +40,10 @@ type serverEnvs struct {
 	Key            string `env:"KEY"`                                  // Secret key for data signing.
 	PrivateKeyPath string `env:"CRYPTO_KEY" json:"crypto_key"`         // Path to the private key file.
 	ConfigPath     string `env:"CONFIG"`                               // Path to the configuration file.
+	TrustedSubnet  string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // Trusted subnet for secure connections.
 	StoreInterval  int    `env:"STORE_INTERVAL" json:"store_interval"` // Interval for storing metrics, in seconds.
 	// Indicates if metrics should be restored on startup.
-	ReStore       bool   `env:"RESTORE" json:"restore"`
-	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // Trusted subnet for secure connections.
+	ReStore bool `env:"RESTORE" json:"restore"`
 }
 
 // parseServerEnvs parses server configuration from command-line flags and environment variables.
@@ -102,10 +102,11 @@ func parseServerEnvs() (*serverEnvs, error) {
 // ServerConfig represents the full server configuration, including
 // parsed environment variables and additional settings like the shutdown timeout.
 type ServerConfig struct {
-	Envs            *serverEnvs     // Server environment configuration.
-	PrivateKey      *rsa.PrivateKey // Private key for encryption, configurable via environment variable "CRYPTO_KEY".
-	ShutdownTimeout int             // Timeout for server shutdown, in seconds.
-	TrustedSubnet   *net.IPNet      // Trusted subnet for secure connections, configurable via environment variable "TRUSTED_SUBNET".
+	Envs       *serverEnvs     // Server environment configuration.
+	PrivateKey *rsa.PrivateKey // Private key for encryption, configurable via environment variable "CRYPTO_KEY".
+	// Trusted subnet for secure connections, configurable via environment variable "TRUSTED_SUBNET".
+	TrustedSubnet   *net.IPNet
+	ShutdownTimeout int // Timeout for server shutdown, in seconds.
 }
 
 // NewServerConfig creates a new ServerConfig instance by parsing environment

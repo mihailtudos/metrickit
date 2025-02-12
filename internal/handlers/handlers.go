@@ -42,12 +42,12 @@ var templatesFs embed.FS
 // database connection, and template filesystem for handling HTTP requests.
 type ServerHandler struct {
 	privateKey  *rsa.PrivateKey
-	services    server.Metrics
 	logger      *slog.Logger
-	TemplatesFs embed.FS
-	db          *pgxpool.Pool
-	secret      string
 	trustedIP   *net.IPNet
+	db          *pgxpool.Pool
+	services    server.Metrics
+	TemplatesFs embed.FS
+	secret      string
 }
 
 // NewHandler initializes a new ServerHandler and registers the application routes.

@@ -123,7 +123,8 @@ func (app *ServerApp) run(ctx context.Context) error {
 	// Initialize repositories and services
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key, app.cfg.PrivateKey, app.cfg.TrustedSubnet)
+	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key,
+		app.cfg.PrivateKey, app.cfg.TrustedSubnet)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -144,7 +145,8 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	// Wait for termination signal
 	sig := <-signalCh
-	app.logger.InfoContext(ctx, "received signal, shutting down server", slog.String("signal", sig.String()))
+	app.logger.InfoContext(ctx, "received signal, shutting down server",
+		slog.String("signal", sig.String()))
 
 	// Shutdown the server gracefully
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, timeToShutDown*time.Second)
