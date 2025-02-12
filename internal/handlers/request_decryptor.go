@@ -33,8 +33,8 @@ func WithRequestDecryptor(privateKey *rsa.PrivateKey, logger *slog.Logger) func(
 					return
 				}
 
-				if err := r.Body.Close(); err != nil {
-					logger.ErrorContext(r.Context(), "failed to close request body", helpers.ErrAttr(err))
+				if errClose := r.Body.Close(); errClose != nil {
+					logger.ErrorContext(r.Context(), "failed to close request body", helpers.ErrAttr(errClose))
 					http.Error(w, "Failed to close request body", http.StatusInternalServerError)
 					return
 				}
