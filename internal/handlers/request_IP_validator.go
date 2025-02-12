@@ -14,9 +14,6 @@ func WithRequestIPValidator(trustedIP *net.IPNet, logger *slog.Logger) func(next
 			if ip == "" {
 				ip = r.Header.Get("X-Forwarded-For")
 			}
-			if ip == "" {
-				ip = r.RemoteAddr
-			}
 
 			if ip != "" {
 				IP := net.ParseIP(ip)
