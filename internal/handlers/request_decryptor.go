@@ -13,11 +13,10 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
 
-// WithRequestDecryptor is a middleware that handles RSA-AES request decryption
+// WithRequestDecryptor is a middleware that handles RSA-AES request decryption.
 func WithRequestDecryptor(privateKey *rsa.PrivateKey, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			isEncrypted := r.Header.Get("X-Encryption") == "RSA-AES"
 
 			if isEncrypted {
