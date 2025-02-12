@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// WithRequestIPValidator returns a middleware function that validates the IP address of the request.
 func WithRequestIPValidator(trustedIP *net.IPNet, logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
