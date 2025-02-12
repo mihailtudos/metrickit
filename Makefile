@@ -23,10 +23,10 @@ swag/gen:
 	swag init --generalInfo ./cmd/server/main.go --parseInternal   --output ./swagger/
 	
 run/server:
-	go run ./cmd/server/. -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
+	go run ./cmd/server/. -crypto-key="./private.pem" -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
-	go run ./cmd/agent/. $(ARGS)
+	go run ./cmd/agent/. $(ARGS) -crypto-key=public.pem
 
 run/tests:
 	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...
@@ -61,6 +61,13 @@ agent/build:
 server/build:
 	cd cmd/server && \
       go build -buildvcs=false  -o server
+
+staticlint/build:
+	cd cmd/staticlint && go build -o staticlint && mv staticlint ../../staticlint
+	cd ../..
+
+staticlint/run: staticlint/build
+	./staticlint ./...
 
 autotest/run1: server/build
 	metricstest -test.v -test.run="^TestIteration1$$" \
@@ -158,12 +165,16 @@ autotest/run13: db/run
         -server-port=8080 \
         -source-path=.
 
+autotest/run18:
+		shortenertestbeta -test.v -test.run="^TestIteration18$$" \
+                      -source-path=. \
+
 .PHONY: run/server, run/agent, run/tests, show/cover, gci/report, \
 		autotest/run1, autotest/run2, autotest/run3, \
 		autotest/run4, autotest/run5, autotest/run6, \
 		autotest/run7, autotest/run8, autotest/run9, \
 		autotest/run10, autotest/run11, autotest/run12, \
-		autotest/run13, db/run
+		autotest/run13, db/run, autotest/run18
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 

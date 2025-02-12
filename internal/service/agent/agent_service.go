@@ -3,6 +3,7 @@
 package agent
 
 import (
+	"crypto/rsa"
 	"log/slog"
 
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
@@ -26,8 +27,11 @@ type AgentService struct {
 
 // NewAgentService creates a new instance of the AgentService struct.
 // It initializes the agent service with the provided repository, logger, and secret.
-func NewAgentService(repository *repositories.AgentRepository, logger *slog.Logger, secret *string) *AgentService {
+func NewAgentService(repository *repositories.AgentRepository,
+	logger *slog.Logger, secret *string,
+	publicKey *rsa.PublicKey) *AgentService {
 	return &AgentService{
-		MetricsService: NewMetricsCollectionService(repository, logger, secret), // Initialize the metrics collection service.
+		MetricsService: NewMetricsCollectionService(repository,
+			logger, secret, publicKey), // Initialize the metrics collection service.
 	}
 }

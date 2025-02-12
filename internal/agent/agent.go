@@ -46,7 +46,9 @@ func RunAgent(agentCfg *config.AgentEnvs) error {
 	// Initialize storage and services for metrics collection.
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
-	metricsService := agent.NewAgentService(metricsRepo, agentCfg.Log, &agentCfg.Key)
+	metricsService := agent.NewAgentService(
+		metricsRepo, agentCfg.Log, &agentCfg.Key,
+		agentCfg.PublicKey)
 
 	// Set up a worker pool with rate limiting.
 	workerPool := worker.NewWorkerPool(agentCfg.RateLimit)
@@ -59,7 +61,7 @@ func RunAgent(agentCfg *config.AgentEnvs) error {
 
 	// Set up a channel to listen for termination signals.
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		<-sigChan
 		cancel()

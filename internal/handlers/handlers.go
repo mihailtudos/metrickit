@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rsa"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -39,6 +40,7 @@ var templatesFs embed.FS
 // ServerHandler is a struct that encapsulates the services, logger,
 // database connection, and template filesystem for handling HTTP requests.
 type ServerHandler struct {
+	privateKey  *rsa.PrivateKey
 	services    server.Metrics
 	logger      *slog.Logger
 	TemplatesFs embed.FS
@@ -49,13 +51,14 @@ type ServerHandler struct {
 // NewHandler initializes a new ServerHandler and registers the application routes.
 // It takes services, logger, database connection, and a secret key as parameters.
 func NewHandler(services server.Metrics, logger *slog.Logger,
-	conn *pgxpool.Pool, secret string) *ServerHandler {
+	conn *pgxpool.Pool, secret string, privateKey *rsa.PrivateKey) *ServerHandler {
 	return &ServerHandler{
 		services:    services,
 		logger:      logger,
 		TemplatesFs: templatesFs,
 		db:          conn,
 		secret:      secret,
+		privateKey:  privateKey,
 	}
 }
 
@@ -67,6 +70,8 @@ func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 	mux.Use(
 		RequestLogger(logger),
 		WithCompressedResponse(logger),
+		WithBodyValidator(sh.secret, logger),
+		WithRequestDecryptor(sh.privateKey, logger),
 	)
 
 	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
@@ -473,17 +478,6 @@ func (sh *ServerHandler) handleBatchUploads(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
-	if sh.secret != "" {
-		if !isBodyValid(body, r.Header.Get("HashSHA256"), sh.secret) {
-			sh.logger.DebugContext(r.Context(),
-				"request body failed integrity check")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		sh.logger.DebugContext(r.Context(),
-			"request body passed integrity check")
-	}
-
 	err = json.Unmarshal(body, &metrics)
 	if err != nil {
 		sh.logger.DebugContext(r.Context(),
@@ -669,16 +663,6 @@ func (sh *ServerHandler) getResponseMetric(metric entities.Metrics) (*entities.M
 
 		return &currentDelta, nil
 	}
-}
-
-// isBodyValid verifies the integrity of the request body by comparing the provided hash with a computed hash.
-// It returns true if the request hash is not empty and matches the computed hash using the provided secret.
-func isBodyValid(data []byte, reqHash, secret string) bool {
-	if reqHash == "" {
-		return false
-	}
-	hashedStr := getHash(data, secret)
-	return hashedStr == reqHash
 }
 
 // getHash computes the HMAC SHA-256 hash of the provided data using the provided secret.

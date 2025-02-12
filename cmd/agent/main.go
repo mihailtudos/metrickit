@@ -23,7 +23,7 @@ func main() {
 
 	agentCfg, err := config.NewAgentConfig()
 	if err != nil {
-		agentCfg.Log.ErrorContext(context.Background(),
+		log.Println(
 			"failed to get agent configurations: ",
 			helpers.ErrAttr(err),
 		)

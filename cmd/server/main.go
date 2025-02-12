@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/mihailtudos/metrickit/internal/config"
 	"github.com/mihailtudos/metrickit/internal/database"
@@ -28,6 +31,8 @@ var (
 	buildDate    string
 	buildCommit  string
 )
+
+const timeToShutDown = 5
 
 //nolint:godot // this comment is part of the Swagger documentation
 // @BasePath  /
@@ -92,6 +97,7 @@ func main() {
 	}
 }
 
+// run function starts the server and handles the server's lifecycle.
 func (app *ServerApp) run(ctx context.Context) error {
 	app.logger.DebugContext(ctx, "provided_config",
 		slog.String("ServerAddress", app.cfg.Envs.Address),
@@ -101,37 +107,59 @@ func (app *ServerApp) run(ctx context.Context) error {
 		slog.Bool("ReStore", app.cfg.Envs.ReStore),
 		slog.Bool("Secret", app.cfg.Envs.Key != ""))
 
-	store, err := storage.NewStorage(app.db,
-		app.logger,
-		app.cfg.Envs.StoreInterval,
-		app.cfg.Envs.StorePath)
+	// Initialize storage
+	store, err := storage.NewStorage(app.db, app.logger, app.cfg.Envs.StoreInterval, app.cfg.Envs.StorePath)
 	if err != nil {
-		app.logger.ErrorContext(ctx, "failed to initialize the mem")
-		return fmt.Errorf("failed to setup the memstore: %w", err)
+		app.logger.ErrorContext(ctx, "failed to initialize storage")
+		return fmt.Errorf("failed to setup storage: %w", err)
 	}
-
 	defer func() {
-		if err = store.Close(ctx); err != nil {
-			app.logger.ErrorContext(ctx,
-				"failed to close the DB connection",
-				helpers.ErrAttr(err))
+		app.logger.DebugContext(ctx, "shutting down storage")
+		if err := store.Close(ctx); err != nil {
+			app.logger.ErrorContext(ctx, "failed to close storage", helpers.ErrAttr(err))
 		}
 	}()
 
+	// Initialize repositories and services
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key)
+	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key, app.cfg.PrivateKey)
 
-	app.logger.DebugContext(context.Background(), "running server 🔥",
-		slog.String("address", app.cfg.Envs.Address))
+	// Start HTTP server
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
 		Handler: handlers.Router(app.logger, serverHandlers),
 	}
 
-	if err = srv.ListenAndServe(); err != nil {
-		return fmt.Errorf("failed to start the server: %w", err)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		app.logger.DebugContext(ctx, "starting server", slog.String("address", srv.Addr))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			app.logger.ErrorContext(ctx, "server error", helpers.ErrAttr(err))
+		}
+	}()
+
+	// Wait for termination signal
+	sig := <-signalCh
+	app.logger.InfoContext(ctx, "received signal, shutting down server", slog.String("signal", sig.String()))
+
+	// Shutdown the server gracefully
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, timeToShutDown*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		app.logger.ErrorContext(ctx, "failed to shutdown server gracefully", helpers.ErrAttr(err))
 	}
 
+	// Additional cleanup for the database connection pool
+	if app.db != nil {
+		app.logger.DebugContext(ctx, "shutting down the db connection pool")
+		app.db.Close()
+	}
+
+	app.logger.InfoContext(ctx, "server stopped successfully")
 	return nil
 }
