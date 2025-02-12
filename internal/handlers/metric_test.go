@@ -241,7 +241,7 @@ func TestBatchUploadsHandler(t *testing.T) {
 			setupSecret:  false,
 			description:  "Returns error for unsupported metric type",
 		},
-		//{
+		// {
 		//	name: "Hash Mismatch",
 		//	metrics: []entities.Metrics{
 		//		{ID: "requests", MType: string(entities.CounterMetricName), Delta: intPtr(5)},
@@ -251,7 +251,7 @@ func TestBatchUploadsHandler(t *testing.T) {
 		//	correctHash:  false,
 		//	setupSecret:  true,
 		//	description:  "Fails due to hash mismatch when secret is provided",
-		//},
+		// },
 		{
 			name:         "Empty Request Body",
 			metrics:      nil,
