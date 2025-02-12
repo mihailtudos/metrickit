@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/spf13/viper"
@@ -41,7 +42,8 @@ type serverEnvs struct {
 	ConfigPath     string `env:"CONFIG"`                               // Path to the configuration file.
 	StoreInterval  int    `env:"STORE_INTERVAL" json:"store_interval"` // Interval for storing metrics, in seconds.
 	// Indicates if metrics should be restored on startup.
-	ReStore bool `env:"RESTORE" json:"restore"`
+	ReStore       bool   `env:"RESTORE" json:"restore"`
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // Trusted subnet for secure connections.
 }
 
 // parseServerEnvs parses server configuration from command-line flags and environment variables.
@@ -65,6 +67,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.StringVar(&envConfig.D3SN, "d", "", "Database connection string (DSN).")
 	flag.StringVar(&envConfig.Key, "k", "", "Secret key for signing data.")
 	flag.StringVar(&envConfig.PrivateKeyPath, "crypto-key", envConfig.PrivateKeyPath, "Path to the private key file.")
+	flag.StringVar(&envConfig.TrustedSubnet, "t", "", "Trusted subnet for secure connections.")
 
 	flag.Parse()
 
@@ -90,6 +93,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 		utils.Replace(&envConfig.ReStore, viper.GetBool("restore"))
 
 		utils.Replace(&envConfig.StoreInterval, int(viper.GetDuration("store_interval").Seconds()))
+		utils.Replace(&envConfig.TrustedSubnet, viper.GetString("trusted_subnet"))
 	}
 
 	return envConfig, nil
@@ -101,6 +105,7 @@ type ServerConfig struct {
 	Envs            *serverEnvs     // Server environment configuration.
 	PrivateKey      *rsa.PrivateKey // Private key for encryption, configurable via environment variable "CRYPTO_KEY".
 	ShutdownTimeout int             // Timeout for server shutdown, in seconds.
+	TrustedSubnet   *net.IPNet      // Trusted subnet for secure connections, configurable via environment variable "TRUSTED_SUBNET".
 }
 
 // NewServerConfig creates a new ServerConfig instance by parsing environment
@@ -122,6 +127,15 @@ func NewServerConfig() (*ServerConfig, error) {
 		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
 		PrivateKey:      privateKey,
+	}
+
+	if envs.TrustedSubnet != "" {
+		IP, IPAddr, err := net.ParseCIDR(envs.TrustedSubnet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
+		}
+		cfg.TrustedSubnet = IPAddr
+		cfg.TrustedSubnet.IP = IP
 	}
 
 	return cfg, nil

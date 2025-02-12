@@ -4,5 +4,6 @@
     "store_interval": "1s",
     "store_file": "/path/to/file.db",
     "database_dsn": "",
-    "crypto_key": "/path/to/key.pem"
+    "crypto_key": "/path/to/key.pem",
+    "trusted_subnet": "192.168.1.141/24"
 } 

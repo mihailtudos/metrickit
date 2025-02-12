@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	mrand "math/rand"
+	"net"
 	"net/http"
 	"runtime"
 
@@ -236,6 +237,9 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 			"request body signed successfully")
 	}
 
+	// Set the X-Real-IP header with the client's IP address
+	setIPHeader(req)
+
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
@@ -254,4 +258,23 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 
 	m.logger.DebugContext(ctx, "published successfully", slog.String("metric", string(mJSONStruct)))
 	return nil
+}
+
+// setIPHeader sets the X-Real-IP header with the client's IP address.
+func setIPHeader(req *http.Request) {
+	localIP := "127.0.0.1" // default fallback
+	addrs, err := net.InterfaceAddrs()
+	if err == nil {
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					localIP = ipnet.IP.String()
+					break
+				}
+			}
+		}
+	}
+
+	// Add X-Real-IP header
+	req.Header.Set("X-Real-IP", localIP)
 }

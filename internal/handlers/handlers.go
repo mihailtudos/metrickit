@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"path"
@@ -46,12 +47,13 @@ type ServerHandler struct {
 	TemplatesFs embed.FS
 	db          *pgxpool.Pool
 	secret      string
+	trustedIP   *net.IPNet
 }
 
 // NewHandler initializes a new ServerHandler and registers the application routes.
 // It takes services, logger, database connection, and a secret key as parameters.
 func NewHandler(services server.Metrics, logger *slog.Logger,
-	conn *pgxpool.Pool, secret string, privateKey *rsa.PrivateKey) *ServerHandler {
+	conn *pgxpool.Pool, secret string, privateKey *rsa.PrivateKey, trustedIP *net.IPNet) *ServerHandler {
 	return &ServerHandler{
 		services:    services,
 		logger:      logger,
@@ -59,6 +61,7 @@ func NewHandler(services server.Metrics, logger *slog.Logger,
 		db:          conn,
 		secret:      secret,
 		privateKey:  privateKey,
+		trustedIP:   trustedIP,
 	}
 }
 
@@ -69,6 +72,7 @@ func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 
 	mux.Use(
 		RequestLogger(logger),
+		WithRequestIPValidator(sh.trustedIP, logger),
 		WithCompressedResponse(logger),
 		WithBodyValidator(sh.secret, logger),
 		WithRequestDecryptor(sh.privateKey, logger),
