@@ -11,8 +11,8 @@ package entities
 // - ID: A string that uniquely identifies the metric. This field is required.
 // - MType: A string that specifies the type of metric, which can be either "gauge" or "counter".
 type Metrics struct {
-	Delta *int64   `json:"delta,omitempty"` // Value for metrics of type counter
-	Value *float64 `json:"value,omitempty"` // Value for metrics of type gauge
-	ID    string   `json:"id"`              // Metric name
-	MType string   `json:"type"`            // Metric type: "gauge" | "counter"
+	Delta *int64   `json:"delta,omitempty" protobuf:"varint,4,opt,name=delta,proto3,oneof"`  // Value for metrics of type counter
+	Value *float64 `json:"value,omitempty" protobuf:"fixed64,3,opt,name=value,proto3,oneof"` // Value for metrics of type gauge
+	ID    string   `json:"id,omitempty" protobuf:"bytes,1,opt,name=id,proto3"`
+	MType string   `json:"type,omitempty" protobuf:"bytes,2,opt,name=m_type,json=mType,proto3"`
 }

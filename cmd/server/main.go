@@ -3,8 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +24,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+	pb "github.com/mihailtudos/metrickit/proto/metrics"
 
 	_ "net/http/pprof"
 
@@ -55,6 +60,17 @@ type ServerApp struct {
 	logger *slog.Logger
 	db     *pgxpool.Pool
 	cfg    *config.ServerConfig
+}
+
+// MetricsService implement interface
+type MetricsService struct {
+	pb.UnimplementedMetricsServer
+}
+
+func (ms *MetricsService) CreateMetric(ctx context.Context, req *pb.CreateMetricRequest) (*pb.CreateMetricResponse, error) {
+	log.Printf("Received metric: %v", req.Metric)
+
+	return &pb.CreateMetricResponse{Message: "Metric created successfully"}, nil
 }
 
 func main() {
@@ -103,6 +119,8 @@ func (app *ServerApp) run(ctx context.Context) error {
 		slog.String("ServerAddress", app.cfg.Envs.Address),
 		slog.String("StorePath", app.cfg.Envs.StorePath),
 		slog.String("LogLevel", app.cfg.Envs.LogLevel),
+		slog.String("ConfigPath", app.cfg.Envs.ConfigPath),
+		slog.String("TrustedIP", app.cfg.Envs.TrustedSubnet),
 		slog.Int("StoreInterval", app.cfg.Envs.StoreInterval),
 		slog.Bool("ReStore", app.cfg.Envs.ReStore),
 		slog.Bool("Secret", app.cfg.Envs.Key != ""))
@@ -126,10 +144,35 @@ func (app *ServerApp) run(ctx context.Context) error {
 	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key,
 		app.cfg.PrivateKey, app.cfg.TrustedSubnet)
 
+	grpcLis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterMetricsServer(grpcServer, &MetricsService{})
+
+	reflection.Register(grpcServer)
+
+	log.Println("gRPC server listening on port 50051")
+	go func() {
+		log.Println("gRPC server listening on port 50051")
+		if err := grpcServer.Serve(grpcLis); err != nil {
+			log.Fatalf("Failed to serve gRPC: %v", err)
+		}
+	}()
+
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	err = pb.RegisterMetricsHandlerFromEndpoint(ctx, mux, "localhost:50051", opts)
+	if err != nil {
+		log.Fatalf("Failed to start gRPC-Gateway: %v", err)
+	}
+
+	log.Println("HTTP server listening on port 8080")
 	// Start HTTP server
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
-		Handler: handlers.Router(app.logger, serverHandlers),
+		Handler: handlers.Router(app.logger, serverHandlers, mux), // Update your Router function to accept the mux
 	}
 
 	signalCh := make(chan os.Signal, 1)

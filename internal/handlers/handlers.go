@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"io"
 	"log/slog"
 	"net"
@@ -67,7 +68,7 @@ func NewHandler(services server.Metrics, logger *slog.Logger,
 
 // Router sets up the HTTP routes for the application.
 // It returns an http.Handler with the configured routes.
-func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
+func Router(logger *slog.Logger, sh *ServerHandler, gwmux *runtime.ServeMux) http.Handler {
 	mux := chi.NewMux()
 
 	mux.Use(
@@ -78,23 +79,21 @@ func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 		WithRequestDecryptor(sh.privateKey, logger),
 	)
 
-	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
-	// Content-Type: text/plain
+	// Mount gRPC-Gateway endpoints under /v1
+	mux.Mount("/v1", gwmux)
+
+	// Existing routes
 	mux.Get("/value/{metricType}/{metricName}", sh.getMetricValue)
 	mux.Get("/", sh.showMetrics(""))
 
-	// handlers to handle metrics following the format:
-	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VALUE>
-	// Content-Type: text/plain
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", sh.handleUploads)
-
 	mux.Post("/update/", sh.handleJSONUploads)
 	mux.Post("/updates/", sh.handleBatchUploads)
 	mux.Post("/value/", sh.getJSONMetricValue)
 
 	mux.Get("/ping", sh.handleDBPing)
 
-	// Register pprof handlers
+	// pprof handlers
 	mux.Get("/debug/pprof/", http.HandlerFunc(pprof.Index))
 	mux.Get("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 	mux.Get("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
@@ -102,7 +101,7 @@ func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 	mux.Get("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 	mux.Handle("/debug/pprof/{profile}", http.HandlerFunc(pprof.Index))
 
-	// Serve Swagger documentation and Swagger UI
+	// Swagger documentation
 	mux.Handle("/swagger/*", http.StripPrefix("/swagger/", http.FileServer(http.Dir("./swagger"))))
 	mux.Get("/swagger-ui/*", httpSwagger.WrapHandler)
 

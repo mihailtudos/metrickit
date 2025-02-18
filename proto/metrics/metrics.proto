@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package metrics;
+
+import "google/api/annotations.proto";  // Make sure annotations.proto is imported in http.proto
+
+option go_package = "github.com/mihailtudos/metrickit/proto/metrics";
+
+message Metric {
+  string id = 1;
+  string m_name = 2;
+  optional double value = 3;
+  optional int64 delta = 4;
+}
+
+message CreateMetricRequest {
+  Metric metric = 1;
+}
+
+message CreateMetricResponse {
+  string message = 1;
+}
+
+message CreateMetricsRequest {
+  repeated Metric metrics = 1;
+}
+
+message CreateMetricsResponse {
+  string message = 1;
+}
+
+message GetMetricRequest {
+  string id = 1; // Using ID directly to fetch a specific metric
+}
+
+message GetMetricResponse {
+  Metric metric = 1;
+  string message = 2;
+}
+
+service Metrics {
+  rpc CreateMetric(CreateMetricRequest) returns (CreateMetricResponse) {
+    option (google.api.http) = {
+      post: "/v1/metrics"
+      body: "*"
+    };
+  };
+
+  rpc CreateMetrics(CreateMetricsRequest) returns (CreateMetricsResponse) {
+    option (google.api.http) = {
+      post: "/v1/metrics/batch"
+      body: "*"
+    };
+  };
+
+  rpc GetMetric(GetMetricRequest) returns (GetMetricResponse) {
+    option (google.api.http) = {
+      get: "/v1/metrics/{id}"
+    };
+  };
+}

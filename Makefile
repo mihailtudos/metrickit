@@ -25,7 +25,6 @@ swag/gen:
 run/server:
 	go run ./cmd/server/. \
 		-crypto-key="./private.pem" \
-		-t="192.168.1.141/24" \
 		-d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
@@ -71,6 +70,11 @@ staticlint/build:
 
 staticlint/run: staticlint/build
 	./staticlint ./...
+
+gen/metric-proto:
+	 protoc --go_out=. --go_opt=paths=source_relative \
+           --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+           proto/metrics/metrics.proto
 
 autotest/run1: server/build
 	metricstest -test.v -test.run="^TestIteration1$$" \
@@ -177,7 +181,7 @@ autotest/run18:
 		autotest/run4, autotest/run5, autotest/run6, \
 		autotest/run7, autotest/run8, autotest/run9, \
 		autotest/run10, autotest/run11, autotest/run12, \
-		autotest/run13, db/run, autotest/run18
+		autotest/run13, db/run, autotest/run18, gen/metric-proto
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 
