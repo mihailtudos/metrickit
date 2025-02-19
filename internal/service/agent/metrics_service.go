@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	pb "github.com/mihailtudos/metrickit/proto/metrics"
+	"google.golang.org/grpc"
 	"log/slog"
 	mrand "math/rand"
 	"net"
@@ -36,18 +38,22 @@ type MetricsCollectionService struct {
 	logger    *slog.Logger
 	secret    *string
 	publicKey *rsa.PublicKey
+	gRPCConn  *grpc.ClientConn
 }
 
 // NewMetricsCollectionService creates a new MetricsCollectionService.
 func NewMetricsCollectionService(
 	repo repositories.MetricsCollectionRepository,
 	logger *slog.Logger,
-	secret *string, publicKey *rsa.PublicKey) *MetricsCollectionService {
+	secret *string,
+	publicKey *rsa.PublicKey,
+	gRPCConn *grpc.ClientConn) *MetricsCollectionService {
 	return &MetricsCollectionService{
 		mRepo:     repo,
 		logger:    logger,
 		secret:    secret,
 		publicKey: publicKey,
+		gRPCConn:  gRPCConn,
 	}
 }
 
@@ -141,6 +147,34 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 			Value: &val,
 		}
 		allMetrics = append(allMetrics, metric)
+	}
+
+	if m.gRPCConn != nil {
+		m.logger.DebugContext(ctx, "publishing metrics via gRPC")
+		c := pb.NewMetricServiceClient(m.gRPCConn)
+
+		grpcRequestMetrics := make([]*pb.Metric, 0, len(allMetrics))
+
+		for _, metric := range allMetrics {
+			mm := &pb.Metric{
+				Id:    metric.ID,
+				MType: metric.MType,
+			}
+
+			if mm.MType == string(entities.CounterMetricName) {
+				mm.Delta = metric.Delta
+			}
+			if mm.MType == string(entities.GaugeMetricName) {
+				mm.Value = metric.Value
+			}
+
+			grpcRequestMetrics = append(grpcRequestMetrics, mm)
+		}
+
+		res, errClient := c.CreateMetrics(ctx, &pb.CreateMetricsRequest{Metrics: grpcRequestMetrics})
+		m.logger.DebugContext(ctx, fmt.Sprintf("response from gRPC server: %v", res))
+		return errClient
+
 	}
 
 	err = m.publishMetric(ctx, url, "application/json", allMetrics, m.publicKey)

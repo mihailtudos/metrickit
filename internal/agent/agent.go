@@ -9,6 +9,9 @@ package agent
 
 import (
 	"context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -46,9 +49,36 @@ func RunAgent(agentCfg *config.AgentEnvs) error {
 	// Initialize storage and services for metrics collection.
 	metricsStore := storage.NewMetricsCollection()
 	metricsRepo := repositories.NewAgentRepository(metricsStore, agentCfg.Log)
+
+	var conn *grpc.ClientConn
+	if agentCfg.GRPCAddress != "" {
+		var err error
+		conn, err = grpc.NewClient(agentCfg.GRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			agentCfg.Log.Error(
+				"Failed to create grpc connection",
+				helpers.ErrAttr(err),
+			)
+			return err
+		}
+
+		defer func() {
+			if errGRPCConn := conn.Close(); errGRPCConn != nil {
+				agentCfg.Log.Error("Failed to close grpc connection", helpers.ErrAttr(errGRPCConn))
+			}
+		}()
+		agentCfg.Log.DebugContext(ctx, "GRPC address provided", slog.String("address", agentCfg.GRPCAddress))
+	} else {
+		agentCfg.Log.DebugContext(ctx, "GRPC address is not provided")
+	}
+
 	metricsService := agent.NewAgentService(
-		metricsRepo, agentCfg.Log, &agentCfg.Key,
-		agentCfg.PublicKey)
+		metricsRepo,
+		agentCfg.Log,
+		&agentCfg.Key,
+		agentCfg.PublicKey,
+		conn,
+	)
 
 	// Set up a worker pool with rate limiting.
 	workerPool := worker.NewWorkerPool(agentCfg.RateLimit)

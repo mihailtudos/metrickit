@@ -4,6 +4,7 @@ package agent
 
 import (
 	"crypto/rsa"
+	"google.golang.org/grpc"
 	"log/slog"
 
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
@@ -29,9 +30,9 @@ type AgentService struct {
 // It initializes the agent service with the provided repository, logger, and secret.
 func NewAgentService(repository *repositories.AgentRepository,
 	logger *slog.Logger, secret *string,
-	publicKey *rsa.PublicKey) *AgentService {
+	publicKey *rsa.PublicKey, gRPCConn *grpc.ClientConn) *AgentService {
 	return &AgentService{
 		MetricsService: NewMetricsCollectionService(repository,
-			logger, secret, publicKey), // Initialize the metrics collection service.
+			logger, secret, publicKey, gRPCConn), // Initialize the metrics collection service.
 	}
 }

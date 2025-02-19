@@ -28,7 +28,7 @@ run/server:
 		-d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
-	go run ./cmd/agent/. $(ARGS) -crypto-key=public.pem
+	go run ./cmd/agent/. $(ARGS) -crypto-key=public.pem -grpc-addr=localhost:50051
 
 run/tests:
 	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...
