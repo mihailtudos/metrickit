@@ -24,7 +24,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
-	"github.com/go-chi/chi/v5"
+	chiv5 "github.com/go-chi/chi/v5"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/mihailtudos/metrickit/swagger"
@@ -69,7 +69,7 @@ func NewHandler(services server.Metrics, logger *slog.Logger,
 // Router sets up the HTTP routes for the application.
 // It returns an http.Handler with the configured routes.
 func Router(logger *slog.Logger, sh *ServerHandler, gwmux *runtime.ServeMux) http.Handler {
-	mux := chi.NewMux()
+	mux := chiv5.NewMux()
 
 	mux.Use(
 		RequestLogger(logger),
@@ -176,8 +176,8 @@ func (sh *ServerHandler) showMetrics(templatePath string) http.HandlerFunc {
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /value/{metricType}/{metricName} [get]
 func (sh *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	metricType := chiv5.URLParam(r, "metricType")
+	metricName := chiv5.URLParam(r, "metricName")
 
 	metric := entities.Metrics{ID: metricName, MType: metricType}
 	currentMetric, err := sh.getMetric(metric)
@@ -386,9 +386,9 @@ func formatBodyMessageErrors(err error) error {
 // @Failure 404 {string} string "Metric type not found"
 // @Router /upload/{metricType}/{metricName}/{metricValue} [post]
 func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
+	metricType := chiv5.URLParam(r, "metricType")
+	metricName := chiv5.URLParam(r, "metricName")
+	metricValue := chiv5.URLParam(r, "metricValue")
 	sh.logger.InfoContext(r.Context(),
 		"received metric type: ",
 		slog.String("metric_type", metricType),

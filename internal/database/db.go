@@ -14,7 +14,7 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
+	pgxv5 "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -28,8 +28,8 @@ type queryTracer struct{}
 // and its arguments.
 func (t *queryTracer) TraceQueryStart(
 	ctx context.Context,
-	_ *pgx.Conn,
-	data pgx.TraceQueryStartData,
+	_ *pgxv5.Conn,
+	data pgxv5.TraceQueryStartData,
 ) context.Context {
 	log.Printf("Running query %s (%v)", data.SQL, data.Args)
 	return ctx
@@ -37,7 +37,7 @@ func (t *queryTracer) TraceQueryStart(
 
 // TraceQueryEnd logs the end of a database query, including the command tag returned
 // by the query execution.
-func (t *queryTracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
+func (t *queryTracer) TraceQueryEnd(_ context.Context, _ *pgxv5.Conn, data pgxv5.TraceQueryEndData) {
 	log.Printf("%v", data.CommandTag)
 }
 
