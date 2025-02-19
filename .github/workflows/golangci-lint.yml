@@ -14,6 +14,11 @@ jobs:
         name: lint
         runs-on: ubuntu-latest
         steps:
+            - name: Clear Go Cache
+              run: |
+                  go clean -modcache
+                  go mod tidy
+                  go mod download
             - uses: actions/checkout@v4
             - uses: actions/setup-go@v5
               with:
