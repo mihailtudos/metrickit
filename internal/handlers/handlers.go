@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"io"
 	"log/slog"
 	"net"
@@ -26,6 +25,7 @@ import (
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/mihailtudos/metrickit/swagger"
 	httpSwagger "github.com/swaggo/http-swagger"

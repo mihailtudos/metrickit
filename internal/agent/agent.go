@@ -9,6 +9,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -60,12 +61,12 @@ func RunAgent(agentCfg *config.AgentEnvs) error {
 				"Failed to create grpc connection",
 				helpers.ErrAttr(err),
 			)
-			return err
+			return fmt.Errorf("failed to create grpc connection: %w", err)
 		}
 
 		defer func() {
 			if errGRPCConn := conn.Close(); errGRPCConn != nil {
-				agentCfg.Log.Error("Failed to close grpc connection", helpers.ErrAttr(errGRPCConn))
+				agentCfg.Log.ErrorContext(ctx, "Failed to close grpc connection", helpers.ErrAttr(errGRPCConn))
 			}
 		}()
 		agentCfg.Log.DebugContext(ctx, "GRPC address provided", slog.String("address", agentCfg.GRPCAddress))

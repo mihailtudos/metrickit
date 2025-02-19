@@ -134,20 +134,22 @@ func (app *ServerApp) run(ctx context.Context) error {
 	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key,
 		app.cfg.PrivateKey, app.cfg.TrustedSubnet)
 
-	grpcLis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+	grpcLis, errTCP := net.Listen("tcp", ":50051")
+	if errTCP != nil {
+		app.logger.ErrorContext(ctx, "failed to listen on gRPC port", helpers.ErrAttr(errTCP))
+		return fmt.Errorf("failed to listen on gRPC port: %w", errTCP)
 	}
 
 	grpcServer := grpc.NewServer()
-	grpcMetricsService := grpcserver.NewMetricsService(service)
+	grpcMetricsService := grpcserver.NewMetricsService(service, app.logger)
 	pb.RegisterMetricServiceServer(grpcServer, grpcMetricsService)
 	reflection.Register(grpcServer)
 
 	go func() {
 		log.Println("gRPC server listening on port 50051")
-		if err := grpcServer.Serve(grpcLis); err != nil {
-			log.Fatalf("Failed to serve gRPC: %v", err)
+		if errGRPC := grpcServer.Serve(grpcLis); errGRPC != nil {
+			app.logger.ErrorContext(ctx, "failed to listen:", helpers.ErrAttr(errGRPC))
+			return
 		}
 	}()
 

@@ -13,8 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	pb "github.com/mihailtudos/metrickit/proto/metrics"
-	"google.golang.org/grpc"
 	"log/slog"
 	mrand "math/rand"
 	"net"
@@ -25,9 +23,11 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+	pb "github.com/mihailtudos/metrickit/proto/metrics"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
+	"google.golang.org/grpc"
 )
 
 const aesKeySize = 32
@@ -161,10 +161,10 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 				MType: metric.MType,
 			}
 
-			if mm.MType == string(entities.CounterMetricName) {
+			if mm.GetMType() == string(entities.CounterMetricName) {
 				mm.Delta = metric.Delta
 			}
-			if mm.MType == string(entities.GaugeMetricName) {
+			if mm.GetMType() == string(entities.GaugeMetricName) {
 				mm.Value = metric.Value
 			}
 
@@ -173,8 +173,7 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 
 		res, errClient := c.CreateMetrics(ctx, &pb.CreateMetricsRequest{Metrics: grpcRequestMetrics})
 		m.logger.DebugContext(ctx, fmt.Sprintf("response from gRPC server: %v", res))
-		return errClient
-
+		return fmt.Errorf("failed to send metrics via gRPC: %w", errClient)
 	}
 
 	err = m.publishMetric(ctx, url, "application/json", allMetrics, m.publicKey)

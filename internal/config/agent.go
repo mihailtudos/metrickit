@@ -37,10 +37,10 @@ type AgentEnvs struct {
 	Log            *slog.Logger   // Logger used by the agent.
 	ServerAddr     string         // Address of the server to which metrics are sent.
 	Key            string         // Secret key used for signing data.
+	GRPCAddress    string         // gRPC server address, configurable via environment variable "GRPC_ADDRESS".
 	RateLimit      int            // Maximum number of concurrent goroutines.
 	PollInterval   time.Duration  // Interval between metric polling operations.
 	ReportInterval time.Duration  // Interval between sending metrics to the server.
-	GRPCAddress    string         // gRPC server address, configurable via environment variable "GRPC_ADDRESS".
 }
 
 // envAgentConfig is a struct for parsing environment variables into agent configuration settings.

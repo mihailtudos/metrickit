@@ -32,7 +32,7 @@ func NewMetricService(repo repositories.MetricsRepository, logger *slog.Logger) 
 // returns an error if the operation fails.
 func (ms *MetricsService) Create(metric entities.Metrics) error {
 	if metric.MType != string(entities.CounterMetricName) && metric.MType != string(entities.GaugeMetricName) {
-		return fmt.Errorf("metric service: invalid metric type")
+		return fmt.Errorf("metric service: invalid metric type: %s", metric.MType)
 	}
 
 	ms.logger.DebugContext(context.Background(), fmt.Sprintf("updating %s metric", metric.ID))

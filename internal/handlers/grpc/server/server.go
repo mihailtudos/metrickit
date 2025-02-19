@@ -4,84 +4,97 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/service/server"
+	"github.com/mihailtudos/metrickit/pkg/helpers"
 	pb "github.com/mihailtudos/metrickit/proto/metrics"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"log"
 )
 
-// MetricsService implement interface
+// MetricsService implement interface.
 type MetricsService struct {
 	pb.UnimplementedMetricServiceServer
 	services *server.MetricsService
+	logger   *slog.Logger
 }
 
+const (
+	metricKey = "metric"
+)
+
 // NewMetricsService creates a new MetricsService.
-func NewMetricsService(services *server.MetricsService) *MetricsService {
+func NewMetricsService(services *server.MetricsService,
+	logger *slog.Logger) *MetricsService {
 	return &MetricsService{
 		services: services,
+		logger:   logger,
 	}
 }
 
 // CreateMetric creates a new metric.
-func (ms *MetricsService) CreateMetric(ctx context.Context, req *pb.CreateMetricRequest) (*pb.CreateMetricResponse, error) {
-	log.Printf("Received metric: %v", req.Metric)
+func (ms *MetricsService) CreateMetric(ctx context.Context,
+	req *pb.CreateMetricRequest) (*pb.CreateMetricResponse, error) {
 	metric := req.GetMetric()
-	fmt.Printf("Create metric: %+v\n", metric)
+
+	ms.logger.InfoContext(ctx, "received", slog.Any(metricKey, metric))
 
 	// Validate request
 	if err := metric.Validate(); err != nil {
-		log.Printf("Validation failed: %v", err)
+		ms.logger.InfoContext(ctx, "Validation failed: %v", helpers.ErrAttr(err))
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
 	}
 
 	err := ms.services.Create(entities.Metrics{
-		ID:    metric.Id,
-		MType: metric.MType,
-		Value: metric.Value,
-		Delta: metric.Delta,
+		ID:    metric.GetId(),
+		MType: metric.GetMType(),
+		Value: proto.Float64(metric.GetValue()),
+		Delta: proto.Int64(metric.GetDelta()),
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create metric: %w", err)
 	}
 
-	return &pb.CreateMetricResponse{Message: "Metric created successfully"}, err
+	return &pb.CreateMetricResponse{Message: "Metric created successfully"}, fmt.Errorf("create metric: %w", err)
 }
 
-func (ms *MetricsService) CreateMetrics(ctx context.Context, req *pb.CreateMetricsRequest) (*pb.CreateMetricsResponse, error) {
+func (ms *MetricsService) CreateMetrics(ctx context.Context,
+	req *pb.CreateMetricsRequest) (*pb.CreateMetricsResponse, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
-		log.Printf("Validation failed: %v", err)
+		ms.logger.InfoContext(ctx, "validation failed", helpers.ErrAttr(err))
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
 	}
+
 	m := req.GetMetrics()
-	fmt.Printf("Received metrics: %+v\n", m)
+	ms.logger.InfoContext(ctx, "received metrics", slog.Any(metricKey, m))
 	metrics := make([]entities.Metrics, 0, len(m))
 
 	// Handle bulk creation logic
 	for _, metric := range m {
-		fmt.Printf("Processing metric: %+v\n", metric)
+		ms.logger.InfoContext(ctx, "processing metric", slog.Any(metricKey, metric))
 		mm := entities.Metrics{
-			ID:    metric.Id,
-			MType: metric.MType,
+			ID:    metric.GetId(),
+			MType: metric.GetMType(),
 		}
 
 		if mm.MType == string(entities.CounterMetricName) {
-			mm.Delta = metric.Delta
+			mm.Delta = proto.Int64(metric.GetDelta())
 		} else {
-			mm.Value = metric.Value
+			mm.Value = proto.Float64(metric.GetValue())
 		}
 
 		metrics = append(metrics, mm)
 	}
 
-	fmt.Printf("Metrics to be stored: %+v\n", metrics)
+	ms.logger.InfoContext(ctx, "metrics to be stored", slog.Any("metrics", metrics))
 
 	if err := ms.services.StoreMetricsBatch(metrics); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to store metrics: %v", err)
@@ -92,17 +105,19 @@ func (ms *MetricsService) CreateMetrics(ctx context.Context, req *pb.CreateMetri
 	}, nil
 }
 
-func (ms *MetricsService) GetMetric(ctx context.Context, req *pb.GetMetricRequest) (*pb.GetMetricResponse, error) {
+func (ms *MetricsService) GetMetric(ctx context.Context,
+	req *pb.GetMetricRequest) (*pb.GetMetricResponse, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
-		log.Printf("Validation failed: %v", err)
+		ms.logger.InfoContext(ctx, "validation failed", helpers.ErrAttr(err))
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
 	}
 
 	// Retrieve the metric by ID from the database
 	id := req.GetId()
 	mType := req.GetMType()
-	log.Printf("Received metric id: %q and type: %q", id, mType)
+	ms.logger.InfoContext(ctx, "received metric",
+		slog.String("id", id), slog.String("mType", mType))
 
 	m, err := ms.services.Get(entities.MetricName(id), entities.MetricType(mType))
 	if err != nil {
@@ -124,7 +139,8 @@ func (ms *MetricsService) GetMetric(ctx context.Context, req *pb.GetMetricReques
 	}, nil
 }
 
-func (ms *MetricsService) GetMetrics(ctx context.Context, _ *emptypb.Empty) (*pb.GetMetricsResponse, error) {
+func (ms *MetricsService) GetMetrics(ctx context.Context,
+	_ *emptypb.Empty) (*pb.GetMetricsResponse, error) {
 	m, err := ms.services.GetAll()
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -137,7 +153,8 @@ func (ms *MetricsService) GetMetrics(ctx context.Context, _ *emptypb.Empty) (*pb
 	metrics := make([]*pb.Metric, 0, len(m.Counter)+len(m.Gauge))
 
 	for k, metric := range m.Counter {
-		fmt.Printf("Metric: %+v, %v\n", metric, k)
+		ms.logger.InfoContext(ctx, "processing counter metric",
+			slog.Any(metricKey, metric))
 		metrics = append(metrics, &pb.Metric{
 			Id:    string(k),
 			MType: string(entities.CounterMetricName),
@@ -146,7 +163,8 @@ func (ms *MetricsService) GetMetrics(ctx context.Context, _ *emptypb.Empty) (*pb
 	}
 
 	for k, metric := range m.Gauge {
-		fmt.Printf("Metric: %+v, %v\n", metric, k)
+		ms.logger.InfoContext(ctx, "processing gauge metric",
+			slog.Any(metricKey, metric))
 		metrics = append(metrics, &pb.Metric{
 			Id:    string(k),
 			MType: string(entities.GaugeMetricName),

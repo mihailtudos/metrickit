@@ -4,10 +4,11 @@ package agent
 
 import (
 	"crypto/rsa"
-	"google.golang.org/grpc"
 	"log/slog"
 
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
+
+	"google.golang.org/grpc"
 )
 
 // MetricsService defines the interface for metrics collection and transmission.
