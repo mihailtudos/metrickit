@@ -14,7 +14,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/caarlos0/env/v11"
+	envv11 "github.com/caarlos0/env/v11"
 	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
@@ -71,7 +71,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 
 	flag.Parse()
 
-	if err := env.Parse(envConfig); err != nil {
+	if err := envv11.Parse(envConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse server configurations: %w", err)
 	}
 

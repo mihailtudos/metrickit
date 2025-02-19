@@ -13,7 +13,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
+	chiv5 "github.com/go-chi/chi/v5"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
@@ -100,11 +100,11 @@ func TestSingleUploadsHandler(t *testing.T) {
 			req = req.WithContext(context.Background())
 
 			// Set URL parameters
-			rctx := chi.NewRouteContext()
+			rctx := chiv5.NewRouteContext()
 			rctx.URLParams.Add("metricType", tt.metricType)
 			rctx.URLParams.Add("metricName", tt.metricName)
 			rctx.URLParams.Add("metricValue", tt.metricValue)
-			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			req = req.WithContext(context.WithValue(req.Context(), chiv5.RouteCtxKey, rctx))
 
 			// Create a ResponseRecorder to capture the response
 			recorder := httptest.NewRecorder()

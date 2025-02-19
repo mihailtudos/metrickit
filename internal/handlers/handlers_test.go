@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/go-chi/chi/v5"
+	chiv5 "github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
@@ -37,11 +37,11 @@ func setupDependencies(t *testing.T) server.Metrics {
 	return service
 }
 
-func setupTestRouter(t *testing.T, service server.Metrics) *chi.Mux {
+func setupTestRouter(t *testing.T, service server.Metrics) *chiv5.Mux {
 	t.Helper()
 	logger := slog.Default()
 
-	mux := chi.NewRouter()
+	mux := chiv5.NewRouter()
 	serverHandlers := NewHandler(service, logger, nil, "", nil, nil)
 
 	// Only use the request logger middleware for testing
@@ -231,10 +231,10 @@ func TestServerHandler_getMetricValue(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create chi context with URL parameters
-			rctx := chi.NewRouteContext()
+			rctx := chiv5.NewRouteContext()
 			rctx.URLParams.Add("metricType", tt.metricType)
 			rctx.URLParams.Add("metricName", tt.metricName)
-			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			req = req.WithContext(context.WithValue(req.Context(), chiv5.RouteCtxKey, rctx))
 
 			handler.getMetricValue(w, req)
 
