@@ -69,7 +69,7 @@ staticlint/build:
 	cd ../..
 
 staticlint/run: staticlint/build
-	./staticlint ./...
+	./staticlint $(shell go list ./... | grep -v /proto/)
 
 gen/metric-proto:
 	rm -rf proto/metrics/*.go && \

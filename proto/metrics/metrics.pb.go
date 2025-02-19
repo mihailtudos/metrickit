@@ -3,7 +3,6 @@
 // 	protoc-gen-go v1.36.5
 // 	protoc        v5.29.2
 // source: metrics/metrics.proto
-
 package metrics
 
 import (

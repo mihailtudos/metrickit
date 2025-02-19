@@ -1,3 +1,4 @@
+// Package server implements the gRPC server for the metrics service.
 package server
 
 import (
