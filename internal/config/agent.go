@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/caarlos0/env/v11"
+	env11 "github.com/caarlos0/env/v11"
 	"github.com/spf13/viper"
 
 	"github.com/mihailtudos/metrickit/internal/logger"
@@ -145,7 +145,7 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	flag.Parse()
 
 	// Parse environment variables into the envConfig struct.
-	if err := env.Parse(envConfig); err != nil {
+	if err := env11.Parse(envConfig); err != nil {
 		return nil, fmt.Errorf("agent configs: %w", err)
 	}
 

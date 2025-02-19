@@ -94,6 +94,7 @@ func shouldSkipFile(filename string) bool {
 		"third_party/",
 		"generated/",
 		".git/",
+		"proto/",
 	}
 
 	for _, pattern := range skipPatterns {
