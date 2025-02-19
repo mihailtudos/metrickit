@@ -72,9 +72,13 @@ staticlint/run: staticlint/build
 	./staticlint ./...
 
 gen/metric-proto:
-	 protoc --go_out=. --go_opt=paths=source_relative \
-           --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-           proto/metrics/metrics.proto
+	rm -rf proto/metrics/*.go && \
+	protoc -I proto -I proto/google -I proto/validate \
+		--go_out=./proto --go_opt=paths=source_relative \
+		--go-grpc_out=./proto --go-grpc_opt=paths=source_relative \
+		--grpc-gateway_out ./proto --grpc-gateway_opt paths=source_relative \
+		--validate_out=lang=go,paths=source_relative:./proto \
+		proto/metrics/metrics.proto
 
 autotest/run1: server/build
 	metricstest -test.v -test.run="^TestIteration1$$" \

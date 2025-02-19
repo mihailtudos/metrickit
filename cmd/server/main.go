@@ -19,6 +19,7 @@ import (
 	"github.com/mihailtudos/metrickit/internal/database"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/handlers"
+	grpcserver "github.com/mihailtudos/metrickit/internal/handlers/grpc/server"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/logger"
 	"github.com/mihailtudos/metrickit/internal/service/server"
@@ -60,17 +61,6 @@ type ServerApp struct {
 	logger *slog.Logger
 	db     *pgxpool.Pool
 	cfg    *config.ServerConfig
-}
-
-// MetricsService implement interface
-type MetricsService struct {
-	pb.UnimplementedMetricsServer
-}
-
-func (ms *MetricsService) CreateMetric(ctx context.Context, req *pb.CreateMetricRequest) (*pb.CreateMetricResponse, error) {
-	log.Printf("Received metric: %v", req.Metric)
-
-	return &pb.CreateMetricResponse{Message: "Metric created successfully"}, nil
 }
 
 func main() {
@@ -148,12 +138,12 @@ func (app *ServerApp) run(ctx context.Context) error {
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	grpcServer := grpc.NewServer()
-	pb.RegisterMetricsServer(grpcServer, &MetricsService{})
 
+	grpcServer := grpc.NewServer()
+	grpcMetricsService := grpcserver.NewMetricsService(service)
+	pb.RegisterMetricServiceServer(grpcServer, grpcMetricsService)
 	reflection.Register(grpcServer)
 
-	log.Println("gRPC server listening on port 50051")
 	go func() {
 		log.Println("gRPC server listening on port 50051")
 		if err := grpcServer.Serve(grpcLis); err != nil {
@@ -162,11 +152,6 @@ func (app *ServerApp) run(ctx context.Context) error {
 	}()
 
 	mux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err = pb.RegisterMetricsHandlerFromEndpoint(ctx, mux, "localhost:50051", opts)
-	if err != nil {
-		log.Fatalf("Failed to start gRPC-Gateway: %v", err)
-	}
 
 	log.Println("HTTP server listening on port 8080")
 	// Start HTTP server

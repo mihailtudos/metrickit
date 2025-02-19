@@ -2,15 +2,16 @@ syntax = "proto3";
 
 package metrics;
 
-import "google/api/annotations.proto";  // Make sure annotations.proto is imported in http.proto
+import "validate/validate.proto";
+import "google/protobuf/empty.proto";  // Import the Empty type
 
 option go_package = "github.com/mihailtudos/metrickit/proto/metrics";
 
 message Metric {
-  string id = 1;
-  string m_name = 2;
-  optional double value = 3;
-  optional int64 delta = 4;
+  string id = 1 [(validate.rules).string.min_len = 1];  // Must not be empty
+  string m_type = 2 [(validate.rules).string = {in: ["gauge", "counter"]}];  // Validate as lowercase string
+  optional double value = 3 [(validate.rules).double = {gte: 0.0}];  // Must be >= 0
+  optional int64 delta = 4 [(validate.rules).int64 = {gte: 0}];  // Must be >= 0
 }
 
 message CreateMetricRequest {
@@ -30,7 +31,8 @@ message CreateMetricsResponse {
 }
 
 message GetMetricRequest {
-  string id = 1; // Using ID directly to fetch a specific metric
+  string id = 1 [(validate.rules).string.min_len = 1];  // Must not be empty
+  string m_type = 2 [(validate.rules).string = {in: ["gauge", "counter"]}];  // Validate as lowercase string
 }
 
 message GetMetricResponse {
@@ -38,24 +40,14 @@ message GetMetricResponse {
   string message = 2;
 }
 
-service Metrics {
-  rpc CreateMetric(CreateMetricRequest) returns (CreateMetricResponse) {
-    option (google.api.http) = {
-      post: "/v1/metrics"
-      body: "*"
-    };
-  };
+message GetMetricsResponse {
+  repeated Metric metric = 1;
+  string message = 2;
+}
 
-  rpc CreateMetrics(CreateMetricsRequest) returns (CreateMetricsResponse) {
-    option (google.api.http) = {
-      post: "/v1/metrics/batch"
-      body: "*"
-    };
-  };
-
-  rpc GetMetric(GetMetricRequest) returns (GetMetricResponse) {
-    option (google.api.http) = {
-      get: "/v1/metrics/{id}"
-    };
-  };
+service MetricService {
+  rpc CreateMetric(CreateMetricRequest) returns (CreateMetricResponse) {};
+  rpc CreateMetrics(CreateMetricsRequest) returns (CreateMetricsResponse) {};
+  rpc GetMetric(GetMetricRequest) returns (GetMetricResponse) {};
+  rpc GetMetrics(google.protobuf.Empty) returns (GetMetricsResponse) {};
 }

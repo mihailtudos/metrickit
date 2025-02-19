@@ -31,6 +31,10 @@ func NewMetricService(repo repositories.MetricsRepository, logger *slog.Logger) 
 // Create adds a new metric to the repository. It logs the action and
 // returns an error if the operation fails.
 func (ms *MetricsService) Create(metric entities.Metrics) error {
+	if metric.MType != string(entities.CounterMetricName) && metric.MType != string(entities.GaugeMetricName) {
+		return fmt.Errorf("metric service: invalid metric type")
+	}
+
 	ms.logger.DebugContext(context.Background(), fmt.Sprintf("updating %s metric", metric.ID))
 	err := ms.repo.Create(metric)
 	if err != nil {

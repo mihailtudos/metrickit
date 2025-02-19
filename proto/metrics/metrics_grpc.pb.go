@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.2
-// source: proto/metrics/metrics.proto
+// source: metrics/metrics.proto
 
 package metrics
 
@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,179 +20,217 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Metrics_CreateMetric_FullMethodName  = "/metrics.Metrics/CreateMetric"
-	Metrics_CreateMetrics_FullMethodName = "/metrics.Metrics/CreateMetrics"
-	Metrics_GetMetric_FullMethodName     = "/metrics.Metrics/GetMetric"
+	MetricService_CreateMetric_FullMethodName  = "/metrics.MetricService/CreateMetric"
+	MetricService_CreateMetrics_FullMethodName = "/metrics.MetricService/CreateMetrics"
+	MetricService_GetMetric_FullMethodName     = "/metrics.MetricService/GetMetric"
+	MetricService_GetMetrics_FullMethodName    = "/metrics.MetricService/GetMetrics"
 )
 
-// MetricsClient is the client API for Metrics service.
+// MetricServiceClient is the client API for MetricService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MetricsClient interface {
+type MetricServiceClient interface {
 	CreateMetric(ctx context.Context, in *CreateMetricRequest, opts ...grpc.CallOption) (*CreateMetricResponse, error)
 	CreateMetrics(ctx context.Context, in *CreateMetricsRequest, opts ...grpc.CallOption) (*CreateMetricsResponse, error)
 	GetMetric(ctx context.Context, in *GetMetricRequest, opts ...grpc.CallOption) (*GetMetricResponse, error)
+	GetMetrics(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetMetricsResponse, error)
 }
 
-type metricsClient struct {
+type metricServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMetricsClient(cc grpc.ClientConnInterface) MetricsClient {
-	return &metricsClient{cc}
+func NewMetricServiceClient(cc grpc.ClientConnInterface) MetricServiceClient {
+	return &metricServiceClient{cc}
 }
 
-func (c *metricsClient) CreateMetric(ctx context.Context, in *CreateMetricRequest, opts ...grpc.CallOption) (*CreateMetricResponse, error) {
+func (c *metricServiceClient) CreateMetric(ctx context.Context, in *CreateMetricRequest, opts ...grpc.CallOption) (*CreateMetricResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateMetricResponse)
-	err := c.cc.Invoke(ctx, Metrics_CreateMetric_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MetricService_CreateMetric_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metricsClient) CreateMetrics(ctx context.Context, in *CreateMetricsRequest, opts ...grpc.CallOption) (*CreateMetricsResponse, error) {
+func (c *metricServiceClient) CreateMetrics(ctx context.Context, in *CreateMetricsRequest, opts ...grpc.CallOption) (*CreateMetricsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateMetricsResponse)
-	err := c.cc.Invoke(ctx, Metrics_CreateMetrics_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MetricService_CreateMetrics_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metricsClient) GetMetric(ctx context.Context, in *GetMetricRequest, opts ...grpc.CallOption) (*GetMetricResponse, error) {
+func (c *metricServiceClient) GetMetric(ctx context.Context, in *GetMetricRequest, opts ...grpc.CallOption) (*GetMetricResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetMetricResponse)
-	err := c.cc.Invoke(ctx, Metrics_GetMetric_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MetricService_GetMetric_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// MetricsServer is the server API for Metrics service.
-// All implementations must embed UnimplementedMetricsServer
+func (c *metricServiceClient) GetMetrics(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMetricsResponse)
+	err := c.cc.Invoke(ctx, MetricService_GetMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MetricServiceServer is the server API for MetricService service.
+// All implementations must embed UnimplementedMetricServiceServer
 // for forward compatibility.
-type MetricsServer interface {
+type MetricServiceServer interface {
 	CreateMetric(context.Context, *CreateMetricRequest) (*CreateMetricResponse, error)
 	CreateMetrics(context.Context, *CreateMetricsRequest) (*CreateMetricsResponse, error)
 	GetMetric(context.Context, *GetMetricRequest) (*GetMetricResponse, error)
-	mustEmbedUnimplementedMetricsServer()
+	GetMetrics(context.Context, *emptypb.Empty) (*GetMetricsResponse, error)
+	mustEmbedUnimplementedMetricServiceServer()
 }
 
-// UnimplementedMetricsServer must be embedded to have
+// UnimplementedMetricServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedMetricsServer struct{}
+type UnimplementedMetricServiceServer struct{}
 
-func (UnimplementedMetricsServer) CreateMetric(context.Context, *CreateMetricRequest) (*CreateMetricResponse, error) {
+func (UnimplementedMetricServiceServer) CreateMetric(context.Context, *CreateMetricRequest) (*CreateMetricResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMetric not implemented")
 }
-func (UnimplementedMetricsServer) CreateMetrics(context.Context, *CreateMetricsRequest) (*CreateMetricsResponse, error) {
+func (UnimplementedMetricServiceServer) CreateMetrics(context.Context, *CreateMetricsRequest) (*CreateMetricsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMetrics not implemented")
 }
-func (UnimplementedMetricsServer) GetMetric(context.Context, *GetMetricRequest) (*GetMetricResponse, error) {
+func (UnimplementedMetricServiceServer) GetMetric(context.Context, *GetMetricRequest) (*GetMetricResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMetric not implemented")
 }
-func (UnimplementedMetricsServer) mustEmbedUnimplementedMetricsServer() {}
-func (UnimplementedMetricsServer) testEmbeddedByValue()                 {}
+func (UnimplementedMetricServiceServer) GetMetrics(context.Context, *emptypb.Empty) (*GetMetricsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMetrics not implemented")
+}
+func (UnimplementedMetricServiceServer) mustEmbedUnimplementedMetricServiceServer() {}
+func (UnimplementedMetricServiceServer) testEmbeddedByValue()                       {}
 
-// UnsafeMetricsServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MetricsServer will
+// UnsafeMetricServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MetricServiceServer will
 // result in compilation errors.
-type UnsafeMetricsServer interface {
-	mustEmbedUnimplementedMetricsServer()
+type UnsafeMetricServiceServer interface {
+	mustEmbedUnimplementedMetricServiceServer()
 }
 
-func RegisterMetricsServer(s grpc.ServiceRegistrar, srv MetricsServer) {
-	// If the following call pancis, it indicates UnimplementedMetricsServer was
+func RegisterMetricServiceServer(s grpc.ServiceRegistrar, srv MetricServiceServer) {
+	// If the following call pancis, it indicates UnimplementedMetricServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Metrics_ServiceDesc, srv)
+	s.RegisterService(&MetricService_ServiceDesc, srv)
 }
 
-func _Metrics_CreateMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricService_CreateMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateMetricRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricsServer).CreateMetric(ctx, in)
+		return srv.(MetricServiceServer).CreateMetric(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Metrics_CreateMetric_FullMethodName,
+		FullMethod: MetricService_CreateMetric_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServer).CreateMetric(ctx, req.(*CreateMetricRequest))
+		return srv.(MetricServiceServer).CreateMetric(ctx, req.(*CreateMetricRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Metrics_CreateMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricService_CreateMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricsServer).CreateMetrics(ctx, in)
+		return srv.(MetricServiceServer).CreateMetrics(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Metrics_CreateMetrics_FullMethodName,
+		FullMethod: MetricService_CreateMetrics_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServer).CreateMetrics(ctx, req.(*CreateMetricsRequest))
+		return srv.(MetricServiceServer).CreateMetrics(ctx, req.(*CreateMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Metrics_GetMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricService_GetMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetMetricRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricsServer).GetMetric(ctx, in)
+		return srv.(MetricServiceServer).GetMetric(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Metrics_GetMetric_FullMethodName,
+		FullMethod: MetricService_GetMetric_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServer).GetMetric(ctx, req.(*GetMetricRequest))
+		return srv.(MetricServiceServer).GetMetric(ctx, req.(*GetMetricRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Metrics_ServiceDesc is the grpc.ServiceDesc for Metrics service.
+func _MetricService_GetMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricServiceServer).GetMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MetricService_GetMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricServiceServer).GetMetrics(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MetricService_ServiceDesc is the grpc.ServiceDesc for MetricService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Metrics_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "metrics.Metrics",
-	HandlerType: (*MetricsServer)(nil),
+var MetricService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "metrics.MetricService",
+	HandlerType: (*MetricServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "CreateMetric",
-			Handler:    _Metrics_CreateMetric_Handler,
+			Handler:    _MetricService_CreateMetric_Handler,
 		},
 		{
 			MethodName: "CreateMetrics",
-			Handler:    _Metrics_CreateMetrics_Handler,
+			Handler:    _MetricService_CreateMetrics_Handler,
 		},
 		{
 			MethodName: "GetMetric",
-			Handler:    _Metrics_GetMetric_Handler,
+			Handler:    _MetricService_GetMetric_Handler,
+		},
+		{
+			MethodName: "GetMetrics",
+			Handler:    _MetricService_GetMetrics_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/metrics/metrics.proto",
+	Metadata: "metrics/metrics.proto",
 }

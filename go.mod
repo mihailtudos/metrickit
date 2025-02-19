@@ -5,8 +5,10 @@ go 1.22.2
 require (
 	github.com/PuerkitoBio/goquery v1.9.0
 	github.com/caarlos0/env/v11 v11.0.0
+	github.com/envoyproxy/protoc-gen-validate v1.1.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/golang/mock v1.6.0
+	github.com/golang/protobuf v1.5.4
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.1
@@ -17,7 +19,6 @@ require (
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.4
 	golang.org/x/tools v0.26.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250207221924-e9438ea467c6
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
 	honnef.co/go/tools v0.5.1
@@ -69,6 +70,7 @@ require (
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250207221924-e9438ea467c6 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250204164813-702378808489 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
