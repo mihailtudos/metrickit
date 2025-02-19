@@ -9,8 +9,6 @@ package agent
 
 import (
 	"context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -24,6 +22,9 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/agent"
 	"github.com/mihailtudos/metrickit/internal/worker"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // RunAgent initializes and starts the agent with the provided configuration.
@@ -55,7 +56,7 @@ func RunAgent(agentCfg *config.AgentEnvs) error {
 		var err error
 		conn, err = grpc.NewClient(agentCfg.GRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			agentCfg.Log.Error(
+			agentCfg.Log.ErrorContext(ctx,
 				"Failed to create grpc connection",
 				helpers.ErrAttr(err),
 			)

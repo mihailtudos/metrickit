@@ -27,7 +27,9 @@ func main() {
 	}
 
 	// Output the build information
-	agentCfg.Log.Info("agent built info", slog.String("version", buildVersion), slog.String("date", buildDate),
+	agentCfg.Log.InfoContext(context.Background(), "agent built info",
+		slog.String("version", buildVersion),
+		slog.String("date", buildDate),
 		slog.String("commit", buildCommit))
 
 	if err = agent.RunAgent(agentCfg); err != nil {

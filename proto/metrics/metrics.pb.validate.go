@@ -22,7 +22,7 @@ import (
 // ensure the imports are used
 var (
 	_ = bytes.MinRead
-	_ = errors.New("")
+	ErrSkip = errors.New("")
 	_ = fmt.Print
 	_ = utf8.UTFMax
 	_ = (*regexp.Regexp)(nil)
