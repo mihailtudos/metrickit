@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	mrand "math/rand"
+	"net"
 	"net/http"
 	"runtime"
 
@@ -22,9 +23,11 @@ import (
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+	pb "github.com/mihailtudos/metrickit/proto/metrics"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
+	"google.golang.org/grpc"
 )
 
 const aesKeySize = 32
@@ -35,18 +38,22 @@ type MetricsCollectionService struct {
 	logger    *slog.Logger
 	secret    *string
 	publicKey *rsa.PublicKey
+	gRPCConn  *grpc.ClientConn
 }
 
 // NewMetricsCollectionService creates a new MetricsCollectionService.
 func NewMetricsCollectionService(
 	repo repositories.MetricsCollectionRepository,
 	logger *slog.Logger,
-	secret *string, publicKey *rsa.PublicKey) *MetricsCollectionService {
+	secret *string,
+	publicKey *rsa.PublicKey,
+	gRPCConn *grpc.ClientConn) *MetricsCollectionService {
 	return &MetricsCollectionService{
 		mRepo:     repo,
 		logger:    logger,
 		secret:    secret,
 		publicKey: publicKey,
+		gRPCConn:  gRPCConn,
 	}
 }
 
@@ -140,6 +147,33 @@ func (m *MetricsCollectionService) Send(serverAddr string) error {
 			Value: &val,
 		}
 		allMetrics = append(allMetrics, metric)
+	}
+
+	if m.gRPCConn != nil {
+		m.logger.DebugContext(ctx, "publishing metrics via gRPC")
+		c := pb.NewMetricServiceClient(m.gRPCConn)
+
+		grpcRequestMetrics := make([]*pb.Metric, 0, len(allMetrics))
+
+		for _, metric := range allMetrics {
+			mm := &pb.Metric{
+				Id:    metric.ID,
+				MType: metric.MType,
+			}
+
+			if mm.GetMType() == string(entities.CounterMetricName) {
+				mm.Delta = metric.Delta
+			}
+			if mm.GetMType() == string(entities.GaugeMetricName) {
+				mm.Value = metric.Value
+			}
+
+			grpcRequestMetrics = append(grpcRequestMetrics, mm)
+		}
+
+		res, errClient := c.CreateMetrics(ctx, &pb.CreateMetricsRequest{Metrics: grpcRequestMetrics})
+		m.logger.DebugContext(ctx, fmt.Sprintf("response from gRPC server: %v", res))
+		return fmt.Errorf("failed to send metrics via gRPC: %w", errClient)
 	}
 
 	err = m.publishMetric(ctx, url, "application/json", allMetrics, m.publicKey)
@@ -236,6 +270,9 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 			"request body signed successfully")
 	}
 
+	// Set the X-Real-IP header with the client's IP address
+	setIPHeader(req)
+
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
@@ -254,4 +291,23 @@ func (m *MetricsCollectionService) publishMetric(ctx context.Context, url,
 
 	m.logger.DebugContext(ctx, "published successfully", slog.String("metric", string(mJSONStruct)))
 	return nil
+}
+
+// setIPHeader sets the X-Real-IP header with the client's IP address.
+func setIPHeader(req *http.Request) {
+	localIP := "127.0.0.1" // default fallback
+	addrs, err := net.InterfaceAddrs()
+	if err == nil {
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					localIP = ipnet.IP.String()
+					break
+				}
+			}
+		}
+	}
+
+	// Add X-Real-IP header
+	req.Header.Set("X-Real-IP", localIP)
 }

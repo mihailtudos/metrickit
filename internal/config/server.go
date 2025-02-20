@@ -9,11 +9,12 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/spf13/viper"
 
-	"github.com/caarlos0/env/v11"
+	envv11 "github.com/caarlos0/env/v11"
 	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 )
@@ -39,6 +40,7 @@ type serverEnvs struct {
 	Key            string `env:"KEY"`                                  // Secret key for data signing.
 	PrivateKeyPath string `env:"CRYPTO_KEY" json:"crypto_key"`         // Path to the private key file.
 	ConfigPath     string `env:"CONFIG"`                               // Path to the configuration file.
+	TrustedSubnet  string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // Trusted subnet for secure connections.
 	StoreInterval  int    `env:"STORE_INTERVAL" json:"store_interval"` // Interval for storing metrics, in seconds.
 	// Indicates if metrics should be restored on startup.
 	ReStore bool `env:"RESTORE" json:"restore"`
@@ -65,10 +67,11 @@ func parseServerEnvs() (*serverEnvs, error) {
 	flag.StringVar(&envConfig.D3SN, "d", "", "Database connection string (DSN).")
 	flag.StringVar(&envConfig.Key, "k", "", "Secret key for signing data.")
 	flag.StringVar(&envConfig.PrivateKeyPath, "crypto-key", envConfig.PrivateKeyPath, "Path to the private key file.")
+	flag.StringVar(&envConfig.TrustedSubnet, "t", "", "Trusted subnet for secure connections.")
 
 	flag.Parse()
 
-	if err := env.Parse(envConfig); err != nil {
+	if err := envv11.Parse(envConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse server configurations: %w", err)
 	}
 
@@ -90,6 +93,7 @@ func parseServerEnvs() (*serverEnvs, error) {
 		utils.Replace(&envConfig.ReStore, viper.GetBool("restore"))
 
 		utils.Replace(&envConfig.StoreInterval, int(viper.GetDuration("store_interval").Seconds()))
+		utils.Replace(&envConfig.TrustedSubnet, viper.GetString("trusted_subnet"))
 	}
 
 	return envConfig, nil
@@ -98,9 +102,11 @@ func parseServerEnvs() (*serverEnvs, error) {
 // ServerConfig represents the full server configuration, including
 // parsed environment variables and additional settings like the shutdown timeout.
 type ServerConfig struct {
-	Envs            *serverEnvs     // Server environment configuration.
-	PrivateKey      *rsa.PrivateKey // Private key for encryption, configurable via environment variable "CRYPTO_KEY".
-	ShutdownTimeout int             // Timeout for server shutdown, in seconds.
+	Envs       *serverEnvs     // Server environment configuration.
+	PrivateKey *rsa.PrivateKey // Private key for encryption, configurable via environment variable "CRYPTO_KEY".
+	// Trusted subnet for secure connections, configurable via environment variable "TRUSTED_SUBNET".
+	TrustedSubnet   *net.IPNet
+	ShutdownTimeout int // Timeout for server shutdown, in seconds.
 }
 
 // NewServerConfig creates a new ServerConfig instance by parsing environment
@@ -122,6 +128,15 @@ func NewServerConfig() (*ServerConfig, error) {
 		Envs:            envs,
 		ShutdownTimeout: defaultShutdownTimeout,
 		PrivateKey:      privateKey,
+	}
+
+	if envs.TrustedSubnet != "" {
+		IP, IPAddr, err := net.ParseCIDR(envs.TrustedSubnet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
+		}
+		cfg.TrustedSubnet = IPAddr
+		cfg.TrustedSubnet.IP = IP
 	}
 
 	return cfg, nil

@@ -26,7 +26,7 @@ func TestAgent(t *testing.T) {
 	if _, err := rand.Read(key); err != nil {
 		t.Fatal(err)
 	}
-	agentService := as.NewAgentService(metricsRepo, logger, nil, nil)
+	agentService := as.NewAgentService(metricsRepo, logger, nil, nil, nil)
 
 	err := agentService.MetricsService.Collect()
 	require.NoError(t, err)

@@ -23,10 +23,12 @@ swag/gen:
 	swag init --generalInfo ./cmd/server/main.go --parseInternal   --output ./swagger/
 	
 run/server:
-	go run ./cmd/server/. -crypto-key="./private.pem" -d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
+	go run ./cmd/server/. \
+		-crypto-key="./private.pem" \
+		-d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
 
 run/agent:
-	go run ./cmd/agent/. $(ARGS) -crypto-key=public.pem
+	go run ./cmd/agent/. $(ARGS) -crypto-key=public.pem -grpc-addr=localhost:50051
 
 run/tests:
 	#go test -v -coverpkg=./... -coverprofile=profile.cov ./...
@@ -67,7 +69,16 @@ staticlint/build:
 	cd ../..
 
 staticlint/run: staticlint/build
-	./staticlint ./...
+	./staticlint $(shell go list ./... | grep -v /proto/)
+
+gen/metric-proto:
+	rm -rf proto/metrics/*.go && \
+	protoc -I proto -I proto/google -I proto/validate \
+		--go_out=./proto --go_opt=paths=source_relative \
+		--go-grpc_out=./proto --go-grpc_opt=paths=source_relative \
+		--grpc-gateway_out ./proto --grpc-gateway_opt paths=source_relative \
+		--validate_out=lang=go,paths=source_relative:./proto \
+		proto/metrics/metrics.proto
 
 autotest/run1: server/build
 	metricstest -test.v -test.run="^TestIteration1$$" \
@@ -174,7 +185,7 @@ autotest/run18:
 		autotest/run4, autotest/run5, autotest/run6, \
 		autotest/run7, autotest/run8, autotest/run9, \
 		autotest/run10, autotest/run11, autotest/run12, \
-		autotest/run13, db/run, autotest/run18
+		autotest/run13, db/run, autotest/run18, gen/metric-proto
 
 GOLANGCI_LINT_CACHE?=/tmp/praktikum-golangci-lint-cache
 
@@ -191,7 +202,7 @@ _golangci-lint-run: _golangci-lint-reports-mkdir
     -v $(shell pwd):/app \
     -v $(GOLANGCI_LINT_CACHE):/root/.cache \
     -w /app \
-    golangci/golangci-lint:v1.61.0 \
+    golangci/golangci-lint:v1.63.4 \
         golangci-lint run \
             -c .golangci.yml \
 	> ./golangci-lint/report-unformatted.json

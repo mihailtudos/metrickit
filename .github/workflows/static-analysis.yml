@@ -32,7 +32,8 @@ jobs:
 
       - name: Run static analysis
         run: |
-          staticlint ./...
+          packages=$(go list ./... | grep -v /proto/)
+          staticlint $packages
         continue-on-error: false
 
       # Optional: Add a step to comment on PR with findings

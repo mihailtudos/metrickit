@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"path"
@@ -23,7 +24,8 @@ import (
 	"github.com/mihailtudos/metrickit/internal/service/server"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
 
-	"github.com/go-chi/chi/v5"
+	chiv5 "github.com/go-chi/chi/v5"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/mihailtudos/metrickit/swagger"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -41,17 +43,18 @@ var templatesFs embed.FS
 // database connection, and template filesystem for handling HTTP requests.
 type ServerHandler struct {
 	privateKey  *rsa.PrivateKey
-	services    server.Metrics
 	logger      *slog.Logger
-	TemplatesFs embed.FS
+	trustedIP   *net.IPNet
 	db          *pgxpool.Pool
+	services    server.Metrics
+	TemplatesFs embed.FS
 	secret      string
 }
 
 // NewHandler initializes a new ServerHandler and registers the application routes.
 // It takes services, logger, database connection, and a secret key as parameters.
 func NewHandler(services server.Metrics, logger *slog.Logger,
-	conn *pgxpool.Pool, secret string, privateKey *rsa.PrivateKey) *ServerHandler {
+	conn *pgxpool.Pool, secret string, privateKey *rsa.PrivateKey, trustedIP *net.IPNet) *ServerHandler {
 	return &ServerHandler{
 		services:    services,
 		logger:      logger,
@@ -59,38 +62,38 @@ func NewHandler(services server.Metrics, logger *slog.Logger,
 		db:          conn,
 		secret:      secret,
 		privateKey:  privateKey,
+		trustedIP:   trustedIP,
 	}
 }
 
 // Router sets up the HTTP routes for the application.
 // It returns an http.Handler with the configured routes.
-func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
-	mux := chi.NewMux()
+func Router(logger *slog.Logger, sh *ServerHandler, gwmux *runtime.ServeMux) http.Handler {
+	mux := chiv5.NewMux()
 
 	mux.Use(
 		RequestLogger(logger),
+		WithRequestIPValidator(sh.trustedIP, logger),
 		WithCompressedResponse(logger),
 		WithBodyValidator(sh.secret, logger),
 		WithRequestDecryptor(sh.privateKey, logger),
 	)
 
-	// GET http://<SERVER_ADDRESS>/value/<METRIC_TYPE>/<METRIC_NAME>
-	// Content-Type: text/plain
+	// Mount gRPC-Gateway endpoints under /v1
+	mux.Mount("/v1", gwmux)
+
+	// Existing routes
 	mux.Get("/value/{metricType}/{metricName}", sh.getMetricValue)
 	mux.Get("/", sh.showMetrics(""))
 
-	// handlers to handle metrics following the format:
-	// http://<SERVER_ADR>/update/<METRIC_TYPE>/<METRIC_NAME>/<METRIC_VALUE>
-	// Content-Type: text/plain
 	mux.Post("/update/{metricType}/{metricName}/{metricValue}", sh.handleUploads)
-
 	mux.Post("/update/", sh.handleJSONUploads)
 	mux.Post("/updates/", sh.handleBatchUploads)
 	mux.Post("/value/", sh.getJSONMetricValue)
 
 	mux.Get("/ping", sh.handleDBPing)
 
-	// Register pprof handlers
+	// pprof handlers
 	mux.Get("/debug/pprof/", http.HandlerFunc(pprof.Index))
 	mux.Get("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 	mux.Get("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
@@ -98,7 +101,7 @@ func Router(logger *slog.Logger, sh *ServerHandler) http.Handler {
 	mux.Get("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 	mux.Handle("/debug/pprof/{profile}", http.HandlerFunc(pprof.Index))
 
-	// Serve Swagger documentation and Swagger UI
+	// Swagger documentation
 	mux.Handle("/swagger/*", http.StripPrefix("/swagger/", http.FileServer(http.Dir("./swagger"))))
 	mux.Get("/swagger-ui/*", httpSwagger.WrapHandler)
 
@@ -173,8 +176,8 @@ func (sh *ServerHandler) showMetrics(templatePath string) http.HandlerFunc {
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /value/{metricType}/{metricName} [get]
 func (sh *ServerHandler) getMetricValue(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	metricType := chiv5.URLParam(r, "metricType")
+	metricName := chiv5.URLParam(r, "metricName")
 
 	metric := entities.Metrics{ID: metricName, MType: metricType}
 	currentMetric, err := sh.getMetric(metric)
@@ -383,9 +386,9 @@ func formatBodyMessageErrors(err error) error {
 // @Failure 404 {string} string "Metric type not found"
 // @Router /upload/{metricType}/{metricName}/{metricValue} [post]
 func (sh *ServerHandler) handleUploads(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
+	metricType := chiv5.URLParam(r, "metricType")
+	metricName := chiv5.URLParam(r, "metricName")
+	metricValue := chiv5.URLParam(r, "metricValue")
 	sh.logger.InfoContext(r.Context(),
 		"received metric type: ",
 		slog.String("metric_type", metricType),

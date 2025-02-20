@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package metrics;
+
+import "validate/validate.proto";
+import "google/protobuf/empty.proto";  // Import the Empty type
+
+option go_package = "github.com/mihailtudos/metrickit/proto/metrics";
+
+message Metric {
+  string id = 1 [(validate.rules).string.min_len = 1];  // Must not be empty
+  string m_type = 2 [(validate.rules).string = {in: ["gauge", "counter"]}];  // Validate as lowercase string
+  optional double value = 3 [(validate.rules).double = {gte: 0.0}];  // Must be >= 0
+  optional int64 delta = 4 [(validate.rules).int64 = {gte: 0}];  // Must be >= 0
+}
+
+message CreateMetricRequest {
+  Metric metric = 1;
+}
+
+message CreateMetricResponse {
+  string message = 1;
+}
+
+message CreateMetricsRequest {
+  repeated Metric metrics = 1;
+}
+
+message CreateMetricsResponse {
+  string message = 1;
+}
+
+message GetMetricRequest {
+  string id = 1 [(validate.rules).string.min_len = 1];  // Must not be empty
+  string m_type = 2 [(validate.rules).string = {in: ["gauge", "counter"]}];  // Validate as lowercase string
+}
+
+message GetMetricResponse {
+  Metric metric = 1;
+  string message = 2;
+}
+
+message GetMetricsResponse {
+  repeated Metric metric = 1;
+  string message = 2;
+}
+
+service MetricService {
+  rpc CreateMetric(CreateMetricRequest) returns (CreateMetricResponse) {};
+  rpc CreateMetrics(CreateMetricsRequest) returns (CreateMetricsResponse) {};
+  rpc GetMetric(GetMetricRequest) returns (GetMetricResponse) {};
+  rpc GetMetrics(google.protobuf.Empty) returns (GetMetricsResponse) {};
+}

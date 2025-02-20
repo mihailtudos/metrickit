@@ -12,7 +12,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
+	pgxv5 "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mihailtudos/metrickit/internal/domain/entities"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
@@ -91,7 +91,7 @@ func (ds *DBStore) GetRecord(mName entities.MetricName, mType entities.MetricTyp
 	}
 
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, pgxv5.ErrNoRows) {
 			return metrics, fmt.Errorf("metric not found: %w", ErrNotFound)
 		}
 		return metrics, fmt.Errorf("failed to get record: %w", err)

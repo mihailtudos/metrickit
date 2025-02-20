@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,15 +16,20 @@ import (
 	"github.com/mihailtudos/metrickit/internal/database"
 	"github.com/mihailtudos/metrickit/internal/domain/repositories"
 	"github.com/mihailtudos/metrickit/internal/handlers"
+	grpcserver "github.com/mihailtudos/metrickit/internal/handlers/grpc/server"
 	"github.com/mihailtudos/metrickit/internal/infrastructure/storage"
 	"github.com/mihailtudos/metrickit/internal/logger"
 	"github.com/mihailtudos/metrickit/internal/service/server"
 	"github.com/mihailtudos/metrickit/internal/utils"
 	"github.com/mihailtudos/metrickit/pkg/helpers"
+	pb "github.com/mihailtudos/metrickit/proto/metrics"
 
 	_ "net/http/pprof"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -103,6 +109,8 @@ func (app *ServerApp) run(ctx context.Context) error {
 		slog.String("ServerAddress", app.cfg.Envs.Address),
 		slog.String("StorePath", app.cfg.Envs.StorePath),
 		slog.String("LogLevel", app.cfg.Envs.LogLevel),
+		slog.String("ConfigPath", app.cfg.Envs.ConfigPath),
+		slog.String("TrustedIP", app.cfg.Envs.TrustedSubnet),
 		slog.Int("StoreInterval", app.cfg.Envs.StoreInterval),
 		slog.Bool("ReStore", app.cfg.Envs.ReStore),
 		slog.Bool("Secret", app.cfg.Envs.Key != ""))
@@ -123,12 +131,35 @@ func (app *ServerApp) run(ctx context.Context) error {
 	// Initialize repositories and services
 	repos := repositories.NewRepository(store)
 	service := server.NewMetricsService(repos, app.logger)
-	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key, app.cfg.PrivateKey)
+	serverHandlers := handlers.NewHandler(service, app.logger, app.db, app.cfg.Envs.Key,
+		app.cfg.PrivateKey, app.cfg.TrustedSubnet)
 
+	grpcLis, errTCP := net.Listen("tcp", ":50051")
+	if errTCP != nil {
+		app.logger.ErrorContext(ctx, "failed to listen on gRPC port", helpers.ErrAttr(errTCP))
+		return fmt.Errorf("failed to listen on gRPC port: %w", errTCP)
+	}
+
+	grpcServer := grpc.NewServer()
+	grpcMetricsService := grpcserver.NewMetricsService(service, app.logger)
+	pb.RegisterMetricServiceServer(grpcServer, grpcMetricsService)
+	reflection.Register(grpcServer)
+
+	go func() {
+		log.Println("gRPC server listening on port 50051")
+		if errGRPC := grpcServer.Serve(grpcLis); errGRPC != nil {
+			app.logger.ErrorContext(ctx, "failed to listen:", helpers.ErrAttr(errGRPC))
+			return
+		}
+	}()
+
+	mux := runtime.NewServeMux()
+
+	log.Println("HTTP server listening on port 8080")
 	// Start HTTP server
 	srv := &http.Server{
 		Addr:    app.cfg.Envs.Address,
-		Handler: handlers.Router(app.logger, serverHandlers),
+		Handler: handlers.Router(app.logger, serverHandlers, mux), // Update your Router function to accept the mux
 	}
 
 	signalCh := make(chan os.Signal, 1)
@@ -144,7 +175,8 @@ func (app *ServerApp) run(ctx context.Context) error {
 
 	// Wait for termination signal
 	sig := <-signalCh
-	app.logger.InfoContext(ctx, "received signal, shutting down server", slog.String("signal", sig.String()))
+	app.logger.InfoContext(ctx, "received signal, shutting down server",
+		slog.String("signal", sig.String()))
 
 	// Shutdown the server gracefully
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, timeToShutDown*time.Second)

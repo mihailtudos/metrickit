@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/caarlos0/env/v11"
+	env11 "github.com/caarlos0/env/v11"
 	"github.com/spf13/viper"
 
 	"github.com/mihailtudos/metrickit/internal/logger"
@@ -37,6 +37,7 @@ type AgentEnvs struct {
 	Log            *slog.Logger   // Logger used by the agent.
 	ServerAddr     string         // Address of the server to which metrics are sent.
 	Key            string         // Secret key used for signing data.
+	GRPCAddress    string         // gRPC server address, configurable via environment variable "GRPC_ADDRESS".
 	RateLimit      int            // Maximum number of concurrent goroutines.
 	PollInterval   time.Duration  // Interval between metric polling operations.
 	ReportInterval time.Duration  // Interval between sending metrics to the server.
@@ -44,7 +45,8 @@ type AgentEnvs struct {
 
 // envAgentConfig is a struct for parsing environment variables into agent configuration settings.
 type envAgentConfig struct {
-	ServerAddr string `env:"ADDRESS" json:"address"`
+	ServerAddr  string `env:"ADDRESS" json:"address"`
+	GRPCAddress string `env:"GRPC_ADDRESS" json:"grpc_address"`
 	// Server address, configurable via environment variable "ADDRESS".
 	LogLevel string `env:"LOG_LEVEL"`
 	// Logging level, configurable via environment variable "LOG_LEVEL".
@@ -93,6 +95,7 @@ func NewAgentConfig() (*AgentEnvs, error) {
 		Key:            envs.Key,
 		RateLimit:      envs.RateLimit,
 		PublicKey:      publicKey,
+		GRPCAddress:    envs.GRPCAddress,
 	}, nil
 }
 
@@ -135,11 +138,14 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 	flag.StringVar(&envConfig.PublicKeyPath, "crypto-key",
 		envConfig.PublicKeyPath,
 		"path to the public key file")
+	flag.StringVar(&envConfig.GRPCAddress, "grpc-addr",
+		"",
+		"sets the address for gRPC communication")
 
 	flag.Parse()
 
 	// Parse environment variables into the envConfig struct.
-	if err := env.Parse(envConfig); err != nil {
+	if err := env11.Parse(envConfig); err != nil {
 		return nil, fmt.Errorf("agent configs: %w", err)
 	}
 
@@ -162,6 +168,7 @@ func parseAgentEnvs() (*envAgentConfig, error) {
 		utils.Replace(&envConfig.PublicKeyPath, viper.GetString("crypto_key"))
 		utils.Replace(&envConfig.PollInterval, int(viper.GetDuration("poll_interval").Seconds()))
 		utils.Replace(&envConfig.ReportInterval, int(viper.GetDuration("report_interval").Seconds()))
+		utils.Replace(&envConfig.GRPCAddress, viper.GetString("grpc_address"))
 	}
 
 	fmt.Printf("%+v", envConfig)
