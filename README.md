@@ -28,6 +28,55 @@ Fine-grained control over what gets monitored, how often, and when alerts fire. 
 
 Understanding monitoring systems deeply by building one from scratch. This hands-on approach reveals the complexities of distributed metrics collection, data aggregation, and alerting logic that using existing tools often abstracts away.
 
-Quick Start
+## Quick Start
+
+To run the development version you will do the following:
+
+1. Clone the repository:
+
+```bash
+    git clone https://github.com/mihailtudos/metrickit.git
+```
+
+2. Run the DB migration:
+
+Before running the application, ensure you a running version Postgres DB:
+
+```bash
+    docker-compose up -d db
+```
+
+3. Install dependencies:
+
+```shell
+    go mod download
+```
+
+4. Run the server:
+
+In order to run the server you will need to set the configuration value via the inline environment variable, flags, or configuration json files:
+
+The priority order is:
+ - Inline environment variable
+ - Flags
+ - Configuration file
+ - Defaults
+
+```shell
+    go run ./cmd/server/. \
+		-crypto-key="./private.pem" \
+		-d="postgres://metrics:metrics@localhost:5432/metrics?sslmode=disable" $(ARGS)
+```
+
+5. Run the agent:
+
+```shell
+    go run ./cmd/agent/. $(ARGS) \ 
+    -crypto-key=public.pem \ 
+    -address=localhost:50051
+```
+
+The agent can be also run with GRPC mode just by setting the `-grpc-addr` flag to the server address.
+
 Usage
 Contributing
