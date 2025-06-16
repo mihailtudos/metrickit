@@ -78,5 +78,55 @@ The priority order is:
 
 The agent can be also run with GRPC mode just by setting the `-grpc-addr` flag to the server address.
 
-Usage
-Contributing
+
+## Features
+
+## 📖 Usage
+
+Available flags for the server:
+- `--config` - Path to the JSON configuration file
+- `a` - Address and port to run the server
+- `l` - Log level (e.g., debug, info, warn)
+- `i` - Metrics store interval in seconds
+- `f` - Path to the metrics store file
+- `r` - Enable or disable metrics restoration at startup
+- `d` - Database connection string (DSN)
+- `k` - Secret key for signing data
+- `--crypto-key` - Path to the private key file
+- `t` - Trusted subnet for secure connections
+
+
+Available flags for the agent:
+- `ll` - Log level
+- `--config` - Agent JSON configuration file path
+- `a` - Server address - usage: ADDRESS:PORT
+- `k` - Sets the secret key used for signing data
+- `p` - Sets the frequency of polling the metrics in seconds
+- `r` - Sets the frequency of sending metrics to the server in seconds
+- `l` - Rate limit, max goroutines to run at a time
+- `--crypto-key` - Path to the public key file
+- `--grpc-addr` - Sets the address for gRPC communication
+
+## 🤝 Contributing
+
+### Clone the repo
+
+```bash
+    git clone git@github.com:mihailtudos/metrickit.git
+    cd metrickit
+```
+
+### Build the project
+
+Follow the quick start guide to build the project.
+
+### Run the tests
+
+```bash
+  go test ./...
+```
+
+### Submit a pull request
+
+If you'd like to contribute, please fork the repository and open a pull request to the `main` branch.
+
